@@ -102,16 +102,16 @@ class Routy
     return false;
   }
 
-  function use(string $base, mixed ...$useables)
+  function group(string $base, mixed ...$useables)
   {
     $callables = [];
     for ($u = 0; $u < count($useables); $u++) {
       if (is_callable($useables[$u])) $callables[] = $useables[$u];
-      elseif ($useables[$u] instanceof Routy) {
-        for ($i = 0; $i < count($useables[$u]->routes); $i++) {
-          $useables[$u]->routes[$i][1] = rtrim($base . $useables[$u]->routes[$i][1], '/');
+      elseif (is_array($useables[$u])) {
+        for ($i = 0; $i < count($useables[$u]); $i++) {
+          $useables[$u][$i][1] = rtrim($base . $useables[$u][$i][1], '/');
           array_unshift($useables[$u]->routes[$i][2], ...$callables);
-          $this->routes[] = $useables[$u]->routes[$i];
+          $this->routes[] = $useables[$u][$i];
         }
       }
     }

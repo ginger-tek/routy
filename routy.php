@@ -28,17 +28,22 @@ class Request
 
 class Response
 {
+  public function send(mixed $data, int $code = 200)
+  {
+    http_response_code($code);
+    if (@file_exists($data)) include $data;
+    else if ($data) echo $data;
+    exit;
+  }
+
   public function json(mixed $data, int $code = 200)
   {
     $this->send(json_encode($data), $code);
   }
 
-  public function send(mixed $data, int $code = 200)
+  public function status(int $code = 200)
   {
-    http_response_code($code);
-    if (file_exists($data)) include $data;
-    else if ($data) echo $data;
-    exit;
+    $this->send(null, $code);
   }
 }
 
@@ -47,7 +52,7 @@ class Routy
   public $base = '';
   public $routes = [];
 
-  function route(string $method, string $route, callable ...$handlers)
+  public function route(string $method, string $route, callable ...$handlers)
   {
     $this->routes[] = [
       $method,
@@ -56,32 +61,32 @@ class Routy
     ];
   }
 
-  function get(string $route, callable ...$handlers)
+  public function get(string $route, callable ...$handlers)
   {
     $this->route('GET', $route, ...$handlers);
   }
 
-  function post(string $route, callable ...$handlers)
+  public function post(string $route, callable ...$handlers)
   {
     $this->route('POST', $route, ...$handlers);
   }
 
-  function patch(string $route, callable ...$handlers)
+  public function patch(string $route, callable ...$handlers)
   {
     $this->route('PATCH', $route, ...$handlers);
   }
 
-  function put(string $route, callable ...$handlers)
+  public function put(string $route, callable ...$handlers)
   {
     $this->route('PUT', $route, ...$handlers);
   }
 
-  function delete(string $route, callable ...$handlers)
+  public function delete(string $route, callable ...$handlers)
   {
     $this->route('DELETE', $route, ...$handlers);
   }
 
-  function matchRoute(string $url, string $route)
+  private function matchRoute(string $url, string $route)
   {
     if ($route == $url) return true;
     $rpts = array_slice(explode('/', $route), 1);
@@ -102,22 +107,23 @@ class Routy
     return false;
   }
 
-  function group(string $base, mixed ...$useables)
+  public function use(string $base, mixed ...$useables)
   {
     $callables = [];
     for ($u = 0; $u < count($useables); $u++) {
       if (is_callable($useables[$u])) $callables[] = $useables[$u];
-      elseif (is_array($useables[$u])) {
-        for ($i = 0; $i < count($useables[$u]); $i++) {
-          $useables[$u][$i][1] = rtrim($base . $useables[$u][$i][1], '/');
-          array_unshift($useables[$u]->routes[$i][2], ...$callables);
-          $this->routes[] = $useables[$u][$i];
+      elseif ($useables[$u] instanceof Routy) {
+        $routes = $useables[$u]->routes;
+        for ($i = 0; $i < count($routes); $i++) {
+          $routes[$i][1] = rtrim($base . $routes[$i][1], '/');
+          array_unshift($routes[$i][2], ...$callables);
+          $this->routes[] = $routes[$i];
         }
       }
     }
   }
 
-  function run()
+  public function run()
   {
     $req = new Request($this->base);
     $res = new Response();
@@ -128,6 +134,6 @@ class Routy
       foreach ($this->routes[$i][2] as $c) ($c)($req, $res);
       exit;
     }
-    $res->json(['error' => 'Route not found'], 404);
+    $res->status(404);
   }
 }

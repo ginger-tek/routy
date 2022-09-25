@@ -19,7 +19,7 @@ class Request
   {
     $this->method = $_SERVER['REQUEST_METHOD'];
     $upts = explode('?', $_SERVER['REQUEST_URI']);
-    $this->uri = str_replace($base, '', rtrim($upts[0], '/'));
+    $this->uri = $upts[0] != '/' ? str_replace($base, '', rtrim($upts[0], '/')) : '/';
     if (@$upts[1]) parse_str($upts[1], $this->query);
     $this->headers = (object)getallheaders();
   }

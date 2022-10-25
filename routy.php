@@ -92,6 +92,11 @@ class Routy
     $this->route('DELETE', $route, ...$handlers);
   }
 
+  public function all(string $route, callable ...$handlers)
+  {
+    $this->route('GET|POST|PUT|PATCH|DELETE|HEAD|OPTION', $route, ...$handlers);
+  }
+
   private function matchRoute(string $url, string $route)
   {
     if ($route == '*' || $route == $url) return true;

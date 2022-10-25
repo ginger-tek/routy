@@ -2,7 +2,7 @@
 
 /**
  * Routy
- * v1.0
+ * v1.0.1
  * https://github.com/ginger-tek/routy
  */
 
@@ -94,7 +94,7 @@ class Routy
 
   private function matchRoute(string $url, string $route)
   {
-    if ($route == $url) return true;
+    if ($route == '*' || $route == $url) return true;
     $rpts = array_slice(explode('/', $route), 1);
     $upts = array_slice(explode('/', $url), 1);
     if (count($rpts) != count($upts)) return false;
@@ -134,7 +134,7 @@ class Routy
     $req = new Request($this->base);
     $res = new Response();
     for ($i = 0; $i < count($this->routes); $i++) {
-      if ($this->routes[$i][0] != '*' && $this->routes[$i][0] != $req->method) continue;
+      if (strpos($this->routes[$i][0], $req->method) === false) continue;
       if (!($r = $this->matchRoute($req->uri, $this->routes[$i][1]))) continue;
       $req->params = $r;
       foreach ($this->routes[$i][2] as $c) ($c)($req, $res);

@@ -2,7 +2,7 @@
 
 /**
  * Routy
- * v1.0.1
+ * v1.0.2
  * https://github.com/ginger-tek/routy
  */
 
@@ -19,7 +19,7 @@ class Request
   {
     $this->method = $_SERVER['REQUEST_METHOD'];
     $upts = explode('?', str_replace($base, '', $_SERVER['REQUEST_URI']));
-    $this->uri = $upts[0] == '/' ? '/' : rtrim($upts[0], '/');
+    $this->uri = $upts[0] == '/' ? '/' : (strlen($upts[0] > 1) ? rtrim($upts[0], '/') : '/');
     if (@$upts[1]) parse_str($upts[1], $this->query);
     $this->headers = (object)getallheaders();
   }

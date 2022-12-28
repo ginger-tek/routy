@@ -2,7 +2,7 @@
 
 /**
  * Routy
- * v1.0.3
+ * v1.0.4
  * https://github.com/ginger-tek/routy
  */
 

@@ -13,7 +13,7 @@ class Request
   public $params = [];
   public $query = [];
   public $headers = [];
-  public $data = [];
+  public $ctx = [];
 
   public function __construct(string $base = '')
   {

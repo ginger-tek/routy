@@ -37,16 +37,16 @@ $app->use('/products', $products);
 ```
 
 ## Middleware
-Similar to Express, all arguments set after the URI string are considered middleware funtions, so you can define as many as needed.
+Similar to Express, all arguments set after the URI string are considered middleware funtions, so you can define as many as needed. Use the `ctx` (context) property to pass data between middleware/handlers.
 
 ```php
 function identify($req, $res) {
   if(!@$req->headers->authorization) return $res->status(401);
-  $req->data['user'] = getUser($req->headers->authorization);
+  $req->ctx['user'] = getUser($req->headers->authorization);
 }
 
 $app->post('/products', 'identify', function($req, $res) {
-  $userId = $req->data['user']->id;
+  $userId = $req->ctx['user']->id;
   $items = getProductsByUser($id);
   $res->json($items);
 });
@@ -76,7 +76,7 @@ $app->post('/products', 'identify', function($req, $res) {
 - `params` - URI parameters
 - `query` - Parsed URL parameters
 - `headers`
-- `data` - Empty array to use for passing around data, such as user identity from middleware
+- `ctx` - (context) Empty array to use for passing data between middleware/handlers, i.e. user identity
 
 ### Methods
 - `body()` - If content-type is application/json, body will be parsed into object

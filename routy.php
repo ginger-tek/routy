@@ -101,7 +101,7 @@ class Routy
   {
     if ($p == $this->req->uri) return true;
     if (strpos($p, ':')) {
-      $rgx = "#^" . preg_replace('/:(\w+)/', '(\w+)', $p) . "$#";
+      $rgx = "#^" . preg_replace('/:(\w+)/', '([\w_-]+)', $p) . "$#";
       if (preg_match($rgx, $this->req->uri, $matches)) {
         preg_match_all('/:(\w+)/', $p, $keys);
         $this->req->params = array_combine($keys[1], array_slice($matches, 1));

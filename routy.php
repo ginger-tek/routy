@@ -11,15 +11,16 @@ class Routy
     {
       public string $method;
       public string $uri;
-      public array $params = [];
-      public array $query = [];
+      public object $params;
+      public object $query;
       public array $ctx = [];
       function __construct()
       {
         $this->method = $_SERVER['REQUEST_METHOD'];
         $parts = parse_url($_SERVER['REQUEST_URI']);
         $this->uri = $parts['path'];
-        parse_str(@$parts['query'] ?? '', $this->query);
+        parse_str(@$parts['query'] ?? '', $query);
+        if (count($query) > 0) $this->query = (object)$query;
       }
       public function headers(): array
       {
@@ -104,7 +105,7 @@ class Routy
       $rgx = "#^" . preg_replace('/:(\w+)/', '([\w_-]+)', $p) . "$#";
       if (preg_match($rgx, $this->req->uri, $matches)) {
         preg_match_all('/:(\w+)/', $p, $keys);
-        $this->req->params = array_combine($keys[1], array_slice($matches, 1));
+        $this->req->params = (object)array_combine($keys[1], array_slice($matches, 1));
         return true;
       }
     }

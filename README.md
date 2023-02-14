@@ -23,6 +23,15 @@ $app->get('/products/:id', function($req, $res) {
 });
 ```
 
+URL query parameters are also available through the `query` property
+```php
+// URI: /products?search=thing
+$app->get('/products', function($req, $res) {
+  $search = $req->query->search;
+  // $search = 'thing'
+})
+```
+
 ## Middleware
 Similar to Express, all arguments set after the URI string are considered middleware funtions, so you can define as many as needed. Use the `ctx` (context) property to pass data between middleware/handlers
 ```php

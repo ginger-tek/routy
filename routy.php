@@ -29,7 +29,8 @@ class Routy
       public function body(): mixed
       {
         $d = file_get_contents('php://input');
-        return $this->headers()['Content-Type'] == 'application/json' ? json_decode($d) : $d;
+        $ct = @$this->headers()['content-type'] ?? @$this->headers()['Content-Type'];
+        return $ct == 'application/json' ? json_decode($d) : $d;
       }
     };
     $this->res = new class

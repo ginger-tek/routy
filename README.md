@@ -88,6 +88,8 @@ $app->all('/:notfound', ...); // URI /asdf will end up here
 $app->run();
 ```
 
+**Note that fallbacks will be reached in the order they are added, so beware of your nesting**
+
 # Docs
 
 ## `Routy (class)`

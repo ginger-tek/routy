@@ -47,7 +47,7 @@ $app->post('/products', 'authenticate', function($req, $res) {
 });
 ```
 
-## Nested Routes (now with middleware!)
+## Nested Routes
 You can define multiple routers and nest them within each other with the `use` method
 ```php
 $app = new Routy();
@@ -63,6 +63,29 @@ $products = new Routy();
 $products->get('/:id', fn($req, $res) => $res->json());
 
 $app->use('/products', 'authenticate', $products);
+```
+
+## Custom Fallback Routes (404)
+By default, if a route is not matched, a standard HTTP 404 status code response is returned. To set a custom 404 response, add a `/:notfound` route for all methods at the end of your instance's route definitions
+```php
+$router = new Routy();
+//... other routes
+$router->all('/:notfound', fn($req, $res) => $res->json('error' => 'Resource not found'));
+```
+
+You can also define separate 404 fallbacks when nesting routers within each other
+```php
+$app = new Routy();
+
+$sub = new Routy();
+$sub->get('/', ...);
+$sub->all('/:notfound', ...); // URI /sub-route/asdf will end up here
+
+$app->get('/', ...);
+$app->use('/sub-route', $sub);
+$app->all('/:notfound', ...); // URI /asdf will end up here
+
+$app->run();
 ```
 
 # Docs

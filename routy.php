@@ -88,16 +88,17 @@ class Routy
   public function use(string $path, mixed ...$handlers): void
   {
     $callables = [];
+    $sub = (object)['method' => null, 'path' => $path, 'routes' => []];
     foreach ($handlers as $h) {
       if (is_callable($h)) $callables[] = $h;
       elseif ($h instanceof Routy) {
         foreach ($h->routes as $r) {
-          $r->path = '/' . trim($path . $r->path, '/');
-          array_unshift($r->handlers, ...$callables);
-          $this->routes[] = $r;
+          if (@$r->handlers) array_unshift($r->handlers, ...$callables);
+          $sub->routes[] = $r;
         }
       }
     }
+    $this->routes[] = $sub;
   }
   private function parse(string $p): bool
   {
@@ -112,12 +113,13 @@ class Routy
     }
     return false;
   }
-  public function run(): void
+  private function findMatch(array $routes, string $base = ''): void
   {
     try {
-      foreach ($this->routes as $r) {
+      foreach ($routes as $r) {
         if ($r->method && $r->method != $this->req->method) continue;
-        if ($this->parse($r->path) || $r->path == '/:notfound') {
+        if (@$r->routes && preg_match("#^$r->path#", $this->req->uri)) $this->findMatch($r->routes, $r->path);
+        if ($this->parse('/' . trim($base . $r->path, '/')) || str_contains($r->path, '/:notfound')) {
           foreach ($r->handlers as $h) ($h)($this->req, $this->res);
           break;
         }
@@ -126,5 +128,9 @@ class Routy
     } catch (Exception $ex) {
       $this->res->status(500)->send('<pre>' . $ex->__toString());
     }
+  }
+  public function run(): void
+  {
+    $this->findMatch($this->routes);
   }
 }

@@ -5,90 +5,115 @@ class Routy
   public object $req;
   public object $res;
   private array $routes = [];
-  function __construct(string $base = '')
+
+  function __construct()
   {
     $this->req = new class
     {
       public string $method;
       public string $uri;
-      public object $params;
       public object $query;
-      public array $ctx = [];
+      public object $params;
+      public array $ctx;
+
       function __construct()
       {
+        $url = parse_url($_SERVER['REQUEST_URI']);
         $this->method = $_SERVER['REQUEST_METHOD'];
-        $parts = parse_url($_SERVER['REQUEST_URI']);
-        $this->uri = $parts['path'];
-        parse_str(@$parts['query'] ?? '', $query);
-        if (count($query) > 0) $this->query = (object)$query;
+        $this->uri = rtrim($url['path'], '/') ?: '/';
+        $this->query = (object)$_REQUEST;
       }
-      public function headers(): array
+
+      public function headers(): object
       {
-        return getallheaders();
+        return (object)getallheaders();
       }
+
       public function body(): mixed
       {
-        $d = file_get_contents('php://input');
-        $ct = @$this->headers()['content-type'] ?? @$this->headers()['Content-Type'];
-        return $ct == 'application/json' ? json_decode($d) : $d;
+        $data = file_get_contents('php://input');
+        $type = @$this->headers()->{'Content-Type'} ?? @$this->headers()->{'content-type'};
+        return $type == 'application/json' ? json_decode($data) : $data;
       }
     };
+
     $this->res = new class
     {
-      public function status(int $code = 200): mixed
+      function render(string $template, ?array $variables = []): void
+      {
+        extract($variables);
+        include $template;
+        exit;
+      }
+
+      function status(int $code): object
       {
         http_response_code($code);
         return $this;
       }
-      public function json(mixed $data): void
+
+      function send(string $data, ?string $type = 'text/html'): void
       {
-        header('content-type: application/json');
+        if ($type) header('Content-Type: ' . $type);
+        echo $data;
+        exit;
+      }
+
+      function redirect(string $uri): void
+      {
+        header('location: ' . $uri);
+        exit;
+      }
+
+      function sendStatus(int $code): void
+      {
+        $this->status($code);
+        exit;
+      }
+
+      function json(mixed $data): void
+      {
+        header('Content-Type: application/json');
         echo json_encode($data);
         exit;
       }
-      public function send(mixed $data, string $type = null): void
-      {
-        if ($type) header("content-type: $type");
-        if (file_exists($data)) @include($data);
-        else echo $data;
-        exit;
-      }
-      public function sendStatus(int $code = 200): void
-      {
-        http_response_code($code);
-        exit;
-      }
     };
-    $this->req->uri = '/' . trim(str_replace($base, '', $this->req->uri), '/');
   }
-  public function post(string $path, callable ...$handlers): void
+
+  public function post(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => 'POST', 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => 'POST', 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function get(string $path, callable ...$handlers): void
+
+  public function get(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => 'GET', 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => 'GET', 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function put(string $path, callable ...$handlers): void
+
+  public function put(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => 'PUT', 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => 'PUT', 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function patch(string $path, callable ...$handlers): void
+
+  public function patch(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => 'PATCH', 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => 'PATCH', 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function delete(string $path, callable ...$handlers): void
+
+  public function delete(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => 'DELETE', 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => 'DELETE', 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function all(string $path, callable ...$handlers): void
+
+  public function any(string $uri, callable ...$handlers): void
   {
-    $this->routes[] = (object)['method' => null, 'path' => $path, 'handlers' => $handlers];
+    $this->routes[] = (object)['method' => null, 'uri' => $uri, 'handlers' => $handlers];
   }
-  public function use(string $path, mixed ...$handlers): void
+
+  public function use(string $base, mixed ...$handlers): void
   {
     $callables = [];
-    $sub = (object)['method' => null, 'path' => $path, 'routes' => []];
+    $sub = (object)['method' => null, 'uri' => $base, 'routes' => []];
     foreach ($handlers as $h) {
       if (is_callable($h)) $callables[] = $h;
       elseif ($h instanceof Routy) {
@@ -100,37 +125,35 @@ class Routy
     }
     $this->routes[] = $sub;
   }
-  private function parse(string $p): bool
+
+  private function validate(string $uri): bool
   {
-    if ($p == $this->req->uri) return true;
-    if (strpos($p, ':')) {
-      $rgx = "#^" . preg_replace('/:(\w+)/', '([\w_-]+)', $p) . "$#";
-      if (preg_match($rgx, $this->req->uri, $matches)) {
-        preg_match_all('/:(\w+)/', $p, $keys);
-        $this->req->params = (object)array_combine($keys[1], array_slice($matches, 1));
-        return true;
-      }
+    if ($uri == $this->req->uri) return true;
+    if (str_contains($uri, ':') && preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-]+)', $uri) . '$#', $this->req->uri, $params)) {
+      $this->req->params = (object)$params;
+      return true;
     }
     return false;
   }
-  private function findMatch(array $routes, string $base = ''): void
+
+  private function matchRoute(array $routes, string $base = ''): void
   {
     try {
       foreach ($routes as $r) {
         if ($r->method && $r->method != $this->req->method) continue;
-        if (@$r->routes && preg_match("#^$r->path#", $this->req->uri)) $this->findMatch($r->routes, $r->path);
-        if ($this->parse('/' . trim($base . $r->path, '/')) || str_contains($r->path, '/:notfound')) {
+        if (@$r->routes && preg_match("#^$r->uri#", $this->req->uri)) $this->matchRoute($r->routes, $r->uri);
+        if ($this->validate('/' . trim($base . $r->uri, '/')) || str_contains($r->uri, '/:notfound')) {
           foreach ($r->handlers as $h) ($h)($this->req, $this->res);
           break;
         }
       }
       $this->res->sendStatus(404);
-    } catch (Exception $ex) {
+    } catch (\Exception $ex) {
       $this->res->status(500)->send('<pre>' . $ex->__toString());
     }
   }
   public function run(): void
   {
-    $this->findMatch($this->routes);
+    $this->matchRoute($this->routes);
   }
 }

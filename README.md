@@ -1,9 +1,10 @@
 # routy
-Simple Express-like PHP router for fast REST API development
+An Express-like PHP router for fast application and REST API development, with dynamic routing, template rendering, nested routers, and more!
 
 # Getting Started
+To add Routy to your project, just download the latest release and extract the `routy.php` to your project directory. Then, simply `include` or `require` the file to start building.
 
-## Quick Example
+## Simple Example
 ```php
 require 'routy.php';
 
@@ -13,6 +14,8 @@ $app->get('/', fn($req, $res) => $res->json(['msg'=>'Hello!']));
 
 $app->run();
 ```
+
+# Features
 
 ## Dynamic Routes
 To define dynamic route parameters, use the `:param` syntax and access them via the `params` property on the `Request` object
@@ -27,9 +30,35 @@ URL query parameters are also available through the `query` property
 ```php
 // URI: /products?search=thing
 $app->get('/products', function($req, $res) {
-  $search = $req->query->search;
+  $search = @$req->query?->search;
   // $search = 'thing'
 })
+```
+
+## Layout Rendering
+Routy comes with basic layout rendering using PHP's built-in templating functionality. Use the `render()` method on the Response object to pass a layout file path that contains at least one include for a page/view file path variable to render. You can also pass any other variables from the callback scope to the template/page scope
+```php
+$app->get('/about', fn($req, $res) => $res->render('layout.php', ['page' => 'pages/about.php']));
+$app->get('/product/:id', function($req, $res) {
+  $product = GetProduct($req->params->id); // user-defined function
+  $res->render('layout.php', ['page' => 'pages/about.php', 'product' => $product]);
+});
+```
+
+### layout.php
+```php
+<html>
+  ...
+  <?php include $page ?>
+  ...
+</html>
+```
+
+### pages/product.php
+```php
+  ...
+  <h3><?= $product->title ?></h3>
+  ...
 ```
 
 ## Middleware
@@ -70,31 +99,30 @@ By default, if a route is not matched, a standard HTTP 404 status code response 
 ```php
 $router = new Routy();
 //... other routes
-$router->all('/:notfound', fn($req, $res) => $res->json('error' => 'Resource not found'));
+$router->any('/:notfound', fn($req, $res) => $res->json('error' => 'Resource not found'));
 ```
 
+### Nested Fallback Routes
 You can also define separate 404 fallbacks when nesting routers within each other
 ```php
 $app = new Routy();
 
 $sub = new Routy();
 $sub->get('/', ...);
-$sub->all('/:notfound', ...); // URI /sub-route/asdf will end up here
+$sub->any('/:notfound', ...); // GET /sub-route/asdf will end up here
 
 $app->get('/', ...);
 $app->use('/sub-route', $sub);
-$app->all('/:notfound', ...); // URI /asdf will end up here
+$app->any('/:notfound', ...); // GET /asdf will end up here
 
 $app->run();
 ```
 
-**Note that fallbacks will be reached in the order they are added, so beware of your nesting**
+**Note that fallbacks will be reached in the order they are added, so be aware of your nesting order**
 
 # Docs
 
 ## `Routy (class)`
-### Constructor
-- `base` - Optional; base of the URL of the app if in a sub-directory
 
 ### Methods
 - `get(string $uri, callable ...$handlers)` - Add a GET route
@@ -102,15 +130,16 @@ $app->run();
 - `put(string $uri, callable ...$handlers)` - Add a PUT route
 - `patch(string $uri, callable ...$handlers)` - Add a PATCH route
 - `delete(string $uri, callable ...$handlers)` - Add a DELETE route
-- `use(string $uri, mixed ...$handlers)` - Adds a nested collections of routes/middleware
+- `any(string $uri, callable ...$handlers)` - Add a route that matches any method
+- `use(string $base, mixed ...$handlers)` - Add a nested collections of routes/middleware
 - `run()` - Executes the router and processes the routes
 
 ## `Request ($req)`
 ### Properties
 - `method` - Request HTTP method
 - `uri` - Request URI path
-- `params` - URI parameters
 - `query` - Parsed URL parameters
+- `params` - URI parameters
 - `ctx` - (context) Empty array to use for passing data between middleware/handlers
 
 ### Methods
@@ -119,7 +148,9 @@ $app->run();
 
 ## `Response ($res)`
 ### Methods
-- `status(int $code)` - Sets HTTP response code and passes Response instance for chaining
+- `render(string $layout, ?array $variables = [])` - Render a templated layout with a page/view and/or variables
+- `status(int $code)` - Sets HTTP response code and returns Response instance for chaining to other methods
 - `sendStatus(int $code)` - Sends HTTP response code
-- `send(mixed $data, string $contentType)` - Sends data as is. If a file path, will render page as response. Optional second argument sets Content-Type header
+- `redirect(string $uri)` - Sends a HTTP 302 redirect to the specified route
+- `send(mixed $data, ?string $contentType = 'text/html')` - Sends data as HTML. Optional second argument sets Content-Type header for other data types
 - `json(mixed $data)` - Sends data as JSON string

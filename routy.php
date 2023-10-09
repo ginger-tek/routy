@@ -118,12 +118,12 @@ class Routy
       if (is_callable($h)) $callables[] = $h;
       elseif ($h instanceof Routy) {
         foreach ($h->routes as $r) {
-          if (@$r->handlers) array_unshift($r->handlers, ...$callables);
-          $sub->routes[] = $r;
+          $r->uri = '/' . trim($base . $r->uri, '/');
+          array_unshift($r->handlers, ...$callables);
+          $this->routes[] = $r;
         }
       }
     }
-    $this->routes[] = $sub;
   }
 
   private function validate(string $uri): bool

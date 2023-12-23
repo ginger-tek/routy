@@ -1,5 +1,7 @@
 <?php
 
+namespace GingerTek\Routy;
+
 class Routy
 {
   public string $uri;

@@ -1,8 +1,8 @@
 # routy
-An Express-like PHP router for fast application and REST API development, with dynamic routing, template rendering, nested routers, and more!
+A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, and middleware support
 
 # Getting Started
-To add Routy to your project, just download the latest release and extract the `routy.php` to your project directory. Then, simply `include` or `require` the file to start building.
+To add Routy to your project, just download the latest release and extract the `routy.php` to your project directory
 
 ## Simple Example
 ```php
@@ -11,111 +11,78 @@ require 'routy.php';
 $app = new Routy();
 
 $app->get('/', fn($req, $res) => $res->json(['msg'=>'Hello!']));
-
-$app->run();
 ```
 
 # Features
 
 ## Dynamic Routes
-To define dynamic route parameters, use the `:param` syntax and access them via the `params` property on the `Request` object
+To define dynamic route parameters, use the `:param` syntax and access them via the `params` property on the `$app` context.
 ```php
-$app->get('/products/:id', function($req, $res) {
-  $id = $req->params->id;
+$app->get('/products/:id', function($app) {
+  $id = $app->params->id;
   // ...
 });
 ```
 
-URL query parameters are also available through the `query` property
-```php
-// URI: /products?search=thing
-$app->get('/products', function($req, $res) {
-  $search = @$req->query?->search;
-  // $search = 'thing'
-})
-```
-
-## Layout Rendering
-Routy comes with basic layout rendering using PHP's built-in templating functionality. Use the `render()` method on the Response object to pass a layout file path that contains at least one include for a page/view file path variable to render. You can also pass any other variables from the callback scope to the template/page scope
-```php
-$app->get('/about', fn($req, $res) => $res->render('layout.php', ['page' => 'pages/about.php']));
-$app->get('/product/:id', function($req, $res) {
-  $product = GetProduct($req->params->id); // user-defined function
-  $res->render('layout.php', ['page' => 'pages/about.php', 'product' => $product]);
-});
-```
-
-### layout.php
-```php
-<html>
-  ...
-  <?php include $page ?>
-  ...
-</html>
-```
-
-### pages/product.php
-```php
-  ...
-  <h3><?= $product->title ?></h3>
-  ...
-```
-
 ## Middleware
-Similar to Express, all arguments set after the URI string are considered middleware funtions, so you can define as many as needed. Use the `ctx` (context) property to pass data between middleware/handlers
+All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed. Use the native `$_REQUEST` global to pass data between middleware/handlers.
 ```php
-function authenticate($req, $res) {
-  if(!@$req->headers->authorization) return $res->status(401);
-  $req->ctx['user'] = getUser($req->headers->authorization);
+function authenticate($app) {
+  if(!($token = @$app->getHeaders()['authorization']))
+    $app->sendStatus(401);
+  $_REQUEST['user'] = parseToken($token);
 }
 
-$app->post('/products', 'authenticate', function($req, $res) {
-  $userId = $req->ctx['user']->id;
-  $items = getProductsByUser($id);
-  $res->json($items);
+$app->get('/products', 'authenticate', function ($app) {
+  $userId = $_REQUEST['user']->id;
+  $items = getProductsByUser($userId);
+  $app->sendJson($items);
 });
 ```
 
 ## Nested Routes
-You can define multiple routers and nest them within each other with the `use` method
+You can define nested or grouped routes using the `with()` method.
 ```php
 $app = new Routy();
-$products = new Routy();
 
-$products->get('/:id', fn($req, $res) => $res->json());
-$app->use('/products', $products);
+$app->with('/products', function ($app) {
+  $app->get('/', fn ($app) => $app->sendJson([]));
+});
 ```
 
 You can also add middleware to your nested routes
 ```php
-$products = new Routy();
-$products->get('/:id', fn($req, $res) => $res->json());
-
-$app->use('/products', 'authenticate', $products);
+$app->with('/products', 'authenticate', function ($app) {
+  $app->get('/', fn ($app) => $app->sendJson([]));
+});
 ```
 
 ## Custom Fallback Routes (404)
-By default, if a route is not matched, a standard HTTP 404 status code response is returned. To set a custom 404 response, add a `/:notfound` route for all methods at the end of your instance's route definitions
-```php
-$router = new Routy();
-//... other routes
-$router->any('/:notfound', fn($req, $res) => $res->json('error' => 'Resource not found'));
-```
-
-### Nested Fallback Routes
-You can also define separate 404 fallbacks when nesting routers within each other
+By default, if a route is not matched, a standard HTTP 404 status code response is returned. To set a custom 404 response, use the `notFound()` method to set a handler function.
 ```php
 $app = new Routy();
 
-$sub = new Routy();
-$sub->get('/', ...);
-$sub->any('/:notfound', ...); // GET /sub-route/asdf will end up here
+//... other routes
 
-$app->get('/', ...);
-$app->use('/sub-route', $sub);
-$app->any('/:notfound', ...); // GET /asdf will end up here
+$app->notFound(function ($app) {
+  $app->sendJson(['error' => 'Resource not found']);
+});
+```
 
-$app->run();
+### Nested Fallback Routes
+You can also define separate 404 fallbacks for separate nested/grouped routes.
+```php
+$app = new Routy();                        
+
+$app->with('/products', function ($app) {
+  $app->get('/', fn ($app) => $app->sendJson([]));
+
+  // GET /products/asdf will end up here
+  $app->notFound(function ($app) { ... });
+});
+
+// GET /asdf will end up here
+$app->notFound(function ($app) { ... });
 ```
 
 **Note that fallbacks will be reached in the order they are added, so be aware of your nesting order**
@@ -130,27 +97,22 @@ $app->run();
 - `put(string $uri, callable ...$handlers)` - Add a PUT route
 - `patch(string $uri, callable ...$handlers)` - Add a PATCH route
 - `delete(string $uri, callable ...$handlers)` - Add a DELETE route
-- `any(string $uri, callable ...$handlers)` - Add a route that matches any method
-- `use(string $base, mixed ...$handlers)` - Add a nested collections of routes/middleware
-- `run()` - Executes the router and processes the routes
+- `head(string $uri, callable ...$handlers)` - Add a HEAD route
+- `with(string $base, callable ...$handlers)` - Add a nested collections of routes
+- `static(string $path)` - Server static files from a directory path (useful for serving JS/CSS/img/font assets)
+- `notFound(string $uri, callable ...$handlers)` - Add a route that matches any method
 
-## `Request ($req)`
+## `App Context ($app)`
 ### Properties
 - `method` - Request HTTP method
 - `uri` - Request URI path
-- `query` - Parsed URL parameters
 - `params` - URI parameters
-- `ctx` - (context) Empty array to use for passing data between middleware/handlers
 
 ### Methods
-- `headers()` - Returns all HTTP headers
-- `body()` - If content-type is application/json, body will be parsed into object
-
-## `Response ($res)`
-### Methods
-- `render(string $layout, ?array $variables = [])` - Render a templated layout with a page/view and/or variables
-- `status(int $code)` - Sets HTTP response code and returns Response instance for chaining to other methods
+- `getHeaders()` - Returns all HTTP headers
+- `getBody()` - If content-type is application/json, body will be parsed into stdClass/array
+- `setStatus(int $code)` - Sets HTTP response code and returns app context instance for chaining to other methods
 - `sendStatus(int $code)` - Sends HTTP response code
-- `redirect(string $uri)` - Sends a HTTP 302 redirect to the specified route
-- `send(mixed $data, ?string $contentType = 'text/html')` - Sends data as HTML. Optional second argument sets Content-Type header for other data types
-- `json(mixed $data)` - Sends data as JSON string
+- `sendRedirect(string $uri, bool $permanent)` - Sends a HTTP 302 redirect to the specified route. When second arg is true, sends HTTP 301 instead
+- `sendData(string $data)` - Sends string data as text. If path to file, sends file contents. If path to PHP file, renders it as an include
+- `sendJson(mixed $data)` - Sends data as JSON string

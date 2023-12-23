@@ -5,10 +5,12 @@
     "keywords": ["router","routing","api","rest","mpa"],
     "homepage": "https://github.com/ginger-tek/routy",
     "license": "MIT",
-    "authors": {
-        "name": "GingerTek",
-        "homepage": "https://github.com/ginger-tek"
-    },
+    "authors": [
+        {
+            "name": "GingerTek",
+            "homepage": "https://github.com/ginger-tek"
+        }
+    ],
     "require": {
         "php": ">=8.3.0"
     },

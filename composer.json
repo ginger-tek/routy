@@ -1,0 +1,17 @@
+{
+    "name": "ginger-tek/routy",
+    "type": "library",
+    "description": "A REST API and MPA router for PHP 8+",
+    "keywords": ["router","routing","api","rest","mpa"],
+    "homepage": "https://github.com/ginger-tek/routy",
+    "license": "MIT",
+    "authors": "GingerTek",
+    "require": {
+        "php": ">=8.3.0"
+    },
+    "autoload": {
+        "psr-0": {
+            "GingerTek": "src/"
+        }
+    }
+}

@@ -2,15 +2,42 @@
 A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, and middleware support
 
 # Getting Started
-To add Routy to your project, just download the latest release and extract the `routy.php` to your project directory
+## Composer
+```
+composer install ginger-tek/routy
+```
 
-## Simple Example
 ```php
-require 'routy.php';
+use GingerTek\Routy\Routy;
 
 $app = new Routy();
+```
 
-$app->get('/', fn($req, $res) => $res->json(['msg'=>'Hello!']));
+You can also download the latest release and extract the `routy.php` to your project directory
+```php
+require 'path/to/Routy.php';
+
+$app = new Routy();
+```
+
+## Simple Example
+Handlers for each route can be any kind of callable, i.e. regular functions, arrow functions, static class methods.
+```php
+$app = new Routy();
+
+$app->get('/things', function ($app) {
+  $app->sendJson([]);
+});
+
+$app->get('/', fn ($app) => $app->sendJson(['msg' => 'Hello, world!']);
+
+class Products {
+  static function getAll($app) {
+    $app->sendJson([ ... ]);
+  }
+}
+
+$app->get('/products', '\Controllers\Products::getAll');
 ```
 
 # Features

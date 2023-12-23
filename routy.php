@@ -2,158 +2,141 @@
 
 class Routy
 {
-  public object $req;
-  public object $res;
-  private array $routes = [];
+  public string $uri;
+  public string $method;
+  public ?object $params;
+  private array $path;
 
   function __construct()
   {
-    $this->req = new class
-    {
-      public string $method;
-      public string $uri;
-      public object $query;
-      public object $params;
-      public array $ctx;
+    $this->uri = '/' . trim(parse_url($_SERVER['REQUEST_URI'])['path'], '/');
+    $this->method = $_SERVER['REQUEST_METHOD'];
+    $this->path = [];
+    $this->params = null;
+  }
 
-      function __construct()
-      {
-        $url = parse_url($_SERVER['REQUEST_URI']);
-        $this->method = $_SERVER['REQUEST_METHOD'];
-        $this->uri = rtrim($url['path'], '/') ?: '/';
-        $this->query = (object)$_REQUEST;
+  function route($method, $route, ...$handlers)
+  {
+    if ($this->method != $method) return;
+    $path = '/' . trim(join('', $this->path) . $route, '/');
+    if ($path == $this->uri || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-]+)', $path) . '$#', $this->uri, $params)) {
+      foreach ($handlers as $handler) {
+        if (isset($params)) $this->params = (object)$params;
+        $handler($this);
       }
+    }
+  }
 
-      public function headers(): object
-      {
-        return (object)getallheaders();
-      }
+  function with($base, ...$items)
+  {
+    $this->path[] = $base;
+    if (str_contains($this->uri, join('', $this->path))) {
+      foreach ($items as $item)
+        $item($this);
+    }
+    array_pop($this->path);
+  }
 
-      public function body(): mixed
-      {
-        $data = file_get_contents('php://input');
-        $type = @$this->headers()->{'Content-Type'} ?? @$this->headers()->{'content-type'};
-        return $type == 'application/json' ? json_decode($data) : $data;
-      }
+  function get($route, ...$handlers)
+  {
+    $this->route('GET', $route, ...$handlers);
+  }
+
+  function post($route, ...$handlers)
+  {
+    $this->route('POST', $route, ...$handlers);
+  }
+
+  function put($route, ...$handlers)
+  {
+    $this->route('PUT', $route, ...$handlers);
+  }
+
+  function patch($route, ...$handlers)
+  {
+    $this->route('PATCH', $route, ...$handlers);
+  }
+
+  function delete($route, ...$handlers)
+  {
+    $this->route('DELETE', $route, ...$handlers);
+  }
+
+  function head($route, ...$handlers)
+  {
+    $this->route('HEAD', $route, ...$handlers);
+  }
+
+  function static($path): void
+  {
+    $item = $path . $this->uri;
+    echo file_get_contents(file_exists($item) && is_file($item) ? $item : "$path/index.html");
+    exit;
+  }
+
+  function getHeaders(): array
+  {
+    $headers = [];
+    foreach (getallheaders() as $k => $v) {
+      $headers[strtolower($k)] = $v;
     };
-
-    $this->res = new class
-    {
-      function render(string $template, ?array $variables = []): void
-      {
-        extract($variables);
-        include $template;
-        exit;
-      }
-
-      function status(int $code): object
-      {
-        http_response_code($code);
-        return $this;
-      }
-
-      function send(string $data, ?string $type = 'text/html'): void
-      {
-        if ($type) header('Content-Type: ' . $type);
-        echo $data;
-        exit;
-      }
-
-      function redirect(string $uri): void
-      {
-        header('location: ' . $uri);
-        exit;
-      }
-
-      function sendStatus(int $code): void
-      {
-        $this->status($code);
-        exit;
-      }
-
-      function json(mixed $data): void
-      {
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
-      }
-    };
+    return $headers;
   }
 
-  public function post(string $uri, callable ...$handlers): void
+  function getBody(): mixed
   {
-    $this->routes[] = (object)['method' => 'POST', 'uri' => $uri, 'handlers' => $handlers];
+    $body = file_get_contents('php://input');
+    if ($this->getHeaders()['content-type'] == 'application/json')
+      return json_decode($body);
+    return $body;
   }
 
-  public function get(string $uri, callable ...$handlers): void
+  function sendRedirect(string $uri, bool $permanent = false): void
   {
-    $this->routes[] = (object)['method' => 'GET', 'uri' => $uri, 'handlers' => $handlers];
+    http_response_code($permanent ? 301 : 302);
+    header("location: $uri");
   }
 
-  public function put(string $uri, callable ...$handlers): void
+  function sendData(string $data = null): void
   {
-    $this->routes[] = (object)['method' => 'PUT', 'uri' => $uri, 'handlers' => $handlers];
-  }
-
-  public function patch(string $uri, callable ...$handlers): void
-  {
-    $this->routes[] = (object)['method' => 'PATCH', 'uri' => $uri, 'handlers' => $handlers];
-  }
-
-  public function delete(string $uri, callable ...$handlers): void
-  {
-    $this->routes[] = (object)['method' => 'DELETE', 'uri' => $uri, 'handlers' => $handlers];
-  }
-
-  public function any(string $uri, callable ...$handlers): void
-  {
-    $this->routes[] = (object)['method' => null, 'uri' => $uri, 'handlers' => $handlers];
-  }
-
-  public function use(string $base, mixed ...$handlers): void
-  {
-    $callables = [];
-    $sub = (object)['method' => null, 'uri' => $base, 'routes' => []];
-    foreach ($handlers as $h) {
-      if (is_callable($h)) $callables[] = $h;
-      elseif ($h instanceof Routy) {
-        foreach ($h->routes as $r) {
-          $r->uri = '/' . trim($base . $r->uri, '/');
-          array_unshift($r->handlers, ...$callables);
-          $this->routes[] = $r;
+    if ($data) {
+      if (file_exists($data)) {
+        if (pathinfo($data, PATHINFO_EXTENSION) == 'php')
+          include $data;
+        else {
+          header('content-type: ' . mime_content_type($data));
+          echo file_get_contents($data);
         }
-      }
+      } else echo $data;
     }
+    exit;
   }
 
-  private function validate(string $uri): bool
+  function setStatus(int $code): Routy
   {
-    if ($uri == $this->req->uri) return true;
-    if (str_contains($uri, ':') && preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-]+)', $uri) . '$#', $this->req->uri, $params)) {
-      $this->req->params = (object)$params;
-      return true;
-    }
-    return false;
+    http_response_code($code);
+    return $this;
   }
 
-  private function matchRoute(array $routes, string $base = ''): void
+  function sendStatus(int $code): void
   {
-    try {
-      foreach ($routes as $r) {
-        if ($r->method && $r->method != $this->req->method) continue;
-        if (@$r->routes && preg_match("#^$r->uri#", $this->req->uri)) $this->matchRoute($r->routes, $r->uri);
-        if ($this->validate('/' . trim($base . $r->uri, '/')) || str_contains($r->uri, '/:notfound')) {
-          foreach ($r->handlers as $h) ($h)($this->req, $this->res);
-          break;
-        }
-      }
-      $this->res->sendStatus(404);
-    } catch (\Exception $ex) {
-      $this->res->status(500)->send('<pre>' . $ex->__toString());
-    }
+    $this->setStatus($code);
+    exit;
   }
-  public function run(): void
+
+  function sendJson(mixed $data): void
   {
-    $this->matchRoute($this->routes);
+    header('content-type: application/json');
+    $this->sendData(json_encode($data));
+  }
+
+  function notFound(?callable $handler = null)
+  {
+    $path = '/' . trim(join('', $this->path), '/');
+    if ($path == '/' || preg_match("#^$path#", $this->uri)) {
+      http_response_code(404);
+      if ($handler) $handler($this);
+      exit;
+    }
   }
 }

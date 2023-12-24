@@ -148,13 +148,16 @@ class Routy
    * Serves static files from a directory. Useful for SPA's to serve JS/CSS/image/font assets.
    * Must be set after all other routes/nested groups to work properly
    *
-   * @param string   $route    A route pattern, i.e. /api/things
+   * @param string $dir  Path to directory to serve
+   * @param string $path URI path on which to serve
    */
-  public function static(string $path): void
+  public function static(string $dir, string $path = '/'): void
   {
-    $item = $path . $this->uri;
-    echo file_get_contents(file_exists($item) && is_file($item) ? $item : "$path/index.html");
-    exit;
+    if ($path == '/' || preg_match("#^$path#", $this->uri)) {
+      $item = $dir . $this->uri;
+      echo file_get_contents(file_exists($item) && is_file($item) ? $item : "$dir/index.html");
+      exit;
+    }
   }
 
   /**
@@ -234,7 +237,7 @@ class Routy
 
   /**
    * Sets the HTTP response code on the response.
-   * Returns the current instance of Routy for chaining
+   * Returns the current instance of Routy for method chaining
    * 
    * @param int $code The HTTP response code to send
    */

@@ -4,7 +4,7 @@ A simple but robust PHP router for fast application and REST API development, wi
 # Getting Started
 ## Composer
 ```
-composer install ginger-tek/routy
+composer require ginger-tek/routy
 ```
 
 ```php
@@ -13,7 +13,7 @@ use GingerTek\Routy\Routy;
 $app = new Routy();
 ```
 
-You can also download the latest release and extract the `routy.php` to your project directory
+You can also download the latest release and require `Routy.php` directly in your project. 
 ```php
 require 'path/to/Routy.php';
 
@@ -26,7 +26,7 @@ Handlers for each route can be any kind of callable, i.e. regular functions, arr
 $app = new Routy();
 
 $app->get('/things', function ($app) {
-  $app->sendJson([]);
+  $app->sendJson([ ... ]);
 });
 
 $app->get('/', fn ($app) => $app->sendJson(['msg' => 'Hello, world!']);
@@ -37,7 +37,7 @@ class Products {
   }
 }
 
-$app->get('/products', '\Controllers\Products::getAll');
+$app->get('/products', '\Products::getAll');
 ```
 
 # Features
@@ -85,7 +85,7 @@ $app->with('/products', 'authenticate', function ($app) {
 ```
 
 ## Custom Fallback Routes (404)
-By default, if a route is not matched, a standard HTTP 404 status code response is returned. To set a custom 404 response, use the `notFound()` method to set a handler function.
+To set custom 404 responses, use the `notFound()` method to set a handler function.
 ```php
 $app = new Routy();
 
@@ -112,11 +112,26 @@ $app->with('/products', function ($app) {
 $app->notFound(function ($app) { ... });
 ```
 
-**Note that fallbacks will be reached in the order they are added, so be aware of your nesting order**
+**NOTE: Fallbacks will be reached in the order they are added, so be aware of your nesting order**
+
+## Static Files
+You can serve static asset files using the `static()` method.
+```php
+// will serve files from the 'public' dir on the root URI
+$app->static('public');
+
+// will serve files from the 'public' dir on the /app URI
+$app->static('public', '/app');
+```
 
 # Docs
+Intellisense should be sufficient, but here is a rudimentary explanation of all the properties and methods.
 
 ## `Routy (class)`
+### Properties
+- `method` - Request HTTP method
+- `uri` - Request URI path
+- `params` - URI parameters
 
 ### Methods
 - `get(string $uri, callable ...$handlers)` - Add a GET route
@@ -124,22 +139,14 @@ $app->notFound(function ($app) { ... });
 - `put(string $uri, callable ...$handlers)` - Add a PUT route
 - `patch(string $uri, callable ...$handlers)` - Add a PATCH route
 - `delete(string $uri, callable ...$handlers)` - Add a DELETE route
-- `head(string $uri, callable ...$handlers)` - Add a HEAD route
+- `options(string $uri, callable ...$handlers)` - Add a OPTIONS route
 - `with(string $base, callable ...$handlers)` - Add a nested collections of routes
-- `static(string $path)` - Server static files from a directory path (useful for serving JS/CSS/img/font assets)
 - `notFound(string $uri, callable ...$handlers)` - Add a route that matches any method
-
-## `App Context ($app)`
-### Properties
-- `method` - Request HTTP method
-- `uri` - Request URI path
-- `params` - URI parameters
-
-### Methods
-- `getHeaders()` - Returns all HTTP headers
-- `getBody()` - If content-type is application/json, body will be parsed into stdClass/array
-- `setStatus(int $code)` - Sets HTTP response code and returns app context instance for chaining to other methods
+- `static(string $dir, string $uri)` - Server static files from a directory path (useful for serving JS/CSS/img/font assets). Optionally specify what URI under which to serve the files
+- `getHeaders()` - Returns request HTTP headers as associative array
+- `getBody()` - Returns request body
+- `setStatus(int $code)` - Sets HTTP response code and returns app context instance for method chaining
 - `sendStatus(int $code)` - Sends HTTP response code
 - `sendRedirect(string $uri, bool $permanent)` - Sends a HTTP 302 redirect to the specified route. When second arg is true, sends HTTP 301 instead
-- `sendData(string $data)` - Sends string data as text. If path to file, sends file contents. If path to PHP file, renders it as an include
+- `sendData(string $data)` - Sends string data as text. If path to file, sends file contents
 - `sendJson(mixed $data)` - Sends data as JSON string

@@ -42,6 +42,31 @@ $app->get('/products', '\Products::getAll');
 
 # Features
 
+## Routes
+Use the common methods for routing, or use `route()` to handle custom method routing
+```php
+$app->get('/products', ...); // HTTP GET
+$app->post('/products/:id', ...); // HTTP POST
+$app->put('/products', ...); // HTTP PUT
+$app->route('GET|POST', '/form', ...); // HTTP GET and POST
+```
+
+Use `*` to match on any route path:
+```php
+$app->get('*', ...); // reached on all GET method routes
+$app->route('GET|POST|PUT', '*', ...); // reached on all GET, POST, and PUT method routes
+```
+
+### CORS Example
+You can also use the `route()` method to roll-your-own CORS handler:
+```php
+$app->route('GET|POST|PUT|DELETE|OPTIONS|HEAD', '*', function (Routy $app) {
+  header('Access-Control-Allow-Origin: *');
+  header('Access-Control-Allow-Headers: *');
+  if ($app->method == 'OPTIONS') $app->sendStatus(200);
+});
+```
+
 ## Dynamic Routes
 To define dynamic route parameters, use the `:param` syntax and access them via the `params` property on the `$app` context.
 ```php
@@ -52,7 +77,7 @@ $app->get('/products/:id', function($app) {
 ```
 
 ## Middleware
-All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed. Use the native `$_REQUEST` global to pass data between middleware/handlers.
+All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed. Use the native `$_REQUEST` and `$_SESSION` globals to share data between middleware/handlers.
 ```php
 function authenticate($app) {
   if(!($token = @$app->getHeaders()['authorization']))
@@ -67,19 +92,19 @@ $app->get('/products', 'authenticate', function ($app) {
 });
 ```
 
-## Nested Routes
-You can define nested or grouped routes using the `with()` method.
+## Grouped/Nested Routes
+You can define grouped/nested routes using the `group()` method.
 ```php
 $app = new Routy();
 
-$app->with('/products', function ($app) {
+$app->group('/products', function ($app) {
   $app->get('/', fn ($app) => $app->sendJson([]));
 });
 ```
 
 You can also add middleware to your nested routes
 ```php
-$app->with('/products', 'authenticate', function ($app) {
+$app->group('/products', 'authenticate', function ($app) {
   $app->get('/', fn ($app) => $app->sendJson([]));
 });
 ```
@@ -101,7 +126,7 @@ You can also define separate 404 fallbacks for separate nested/grouped routes.
 ```php
 $app = new Routy();                        
 
-$app->with('/products', function ($app) {
+$app->group('/products', function ($app) {
   $app->get('/', fn ($app) => $app->sendJson([]));
 
   // GET /products/asdf will end up here
@@ -115,7 +140,7 @@ $app->notFound(function ($app) { ... });
 **NOTE: Fallbacks will be reached in the order they are added, so be aware of your nesting order**
 
 ## Static Files
-You can serve static asset files using the `static()` method.
+You can serve static asset files using the `static()` method. This is useful for serving a SPA app alongside a REST API, which both be served from the same Routy app using this method.
 ```php
 // will serve files from the 'public' dir on the root URI
 $app->static('public');
@@ -123,6 +148,8 @@ $app->static('public');
 // will serve files from the 'public' dir on the /app URI
 $app->static('public', '/app');
 ```
+
+**NOTE: This must only be defined AFTER all the other routes in order to work as intended**
 
 # Docs
 Intellisense should be sufficient, but here is a rudimentary explanation of all the properties and methods.
@@ -139,9 +166,9 @@ Intellisense should be sufficient, but here is a rudimentary explanation of all 
 - `put(string $uri, callable ...$handlers)` - Add a PUT route
 - `patch(string $uri, callable ...$handlers)` - Add a PATCH route
 - `delete(string $uri, callable ...$handlers)` - Add a DELETE route
-- `options(string $uri, callable ...$handlers)` - Add a OPTIONS route
-- `with(string $base, callable ...$handlers)` - Add a nested collections of routes
-- `notFound(string $uri, callable ...$handlers)` - Add a route that matches any method
+- `route(string $method, string $uri, callable ...$handlers)` - Add a route that matches a method string, delimited by `|`
+- `group(string $base, callable ...$handlers)` - Add a grouped/nested collection of routes
+- `notFound(string $uri, callable ...$handlers)` - Add a fallback route to provide custom 404 handling
 - `static(string $dir, string $uri)` - Server static files from a directory path (useful for serving JS/CSS/img/font assets). Optionally specify what URI under which to serve the files
 - `getHeaders()` - Returns request HTTP headers as associative array
 - `getBody()` - Returns request body

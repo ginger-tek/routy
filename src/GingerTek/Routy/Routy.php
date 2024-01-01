@@ -29,13 +29,13 @@ class Routy
   public ?object $params;
 
   /**
-   * @var array Internal array of URI parts for handling nested matching
+   * @var array Internal array of URI parts for handling grouped/nested matching
    */
   private array $path;
 
   function __construct()
   {
-    $this->uri = '/' . trim(parse_url($_SERVER['REQUEST_URI'])['path'], '/');
+    $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = [];
     $this->params = null;
@@ -52,8 +52,8 @@ class Routy
   {
     if (!str_contains($method, $this->method))
       return;
-    $path = '/' . trim(join('', $this->path) . $route, '/');
-    if ($path == $this->uri || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-]+)', $path) . '$#', $this->uri, $params)) {
+    $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
+    if ($path == $this->uri || $path == '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-]+)', $path) . '$#', $this->uri, $params)) {
       foreach ($handlers as $handler) {
         if (isset($params))
           $this->params = (object) $params;
@@ -68,7 +68,7 @@ class Routy
    * @param string   $base     Base of the group route, i.e. /products
    * @param callable $handlers The handling function(s) to be executed
    */
-  public function with(string $base, callable ...$handlers): void
+  public function group(string $base, callable ...$handlers): void
   {
     $this->path[] = $base;
     if (str_contains($this->uri, join('', $this->path))) {
@@ -134,14 +134,15 @@ class Routy
   }
 
   /**
-   * Defines an HTTP OPTIONS route on which to match the incoming URI against
+   * Defines a route for any common HTTP method on which to match the incoming URI against.
+   * The matching HTTP methods include: GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
    */
-  public function options(string $route, callable ...$handlers): void
+  public function any(string $route, callable ...$handlers): void
   {
-    $this->route('OPTIONS', $route, ...$handlers);
+    $this->route('GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS', $route, ...$handlers);
   }
 
   /**
@@ -153,9 +154,34 @@ class Routy
    */
   public function static(string $dir, string $path = '/'): void
   {
+    if (!str_contains('GET|HEAD|OPTIONS', $this->method)) {
+      header('Allow: GET, HEAD');
+      header('Content-Length: 0');
+      exit;
+    }
     if ($path == '/' || preg_match("#^$path#", $this->uri)) {
       $item = $dir . $this->uri;
-      echo file_get_contents(file_exists($item) && is_file($item) ? $item : "$dir/index.html");
+      if (file_exists($item) && is_file($item)) {
+        header('Content-Type: ' . match (pathinfo($item, PATHINFO_EXTENSION)) {
+          'js' => 'application/javascript',
+          'css' => 'text/css',
+          'woff' => 'font/woff',
+          'woff2' => 'font/woff2',
+          'json' => 'application/json',
+          'xml' => 'application/xml',
+          'png' => 'image/png',
+          'jpeg', 'jpg' => 'image/jpeg',
+          'webp' => 'image/webp',
+          'webm' => 'image/webm',
+          'gif' => 'image/gif',
+          'bmp' => 'image/bmp',
+          'ico' => 'image/ico',
+          'tiff', 'tif' => 'image/tiff',
+          'svg', 'svgz' => 'image/svg+xml',
+          default => mime_content_type($item)
+        });
+        echo file_get_contents($item);
+      } else echo file_get_contents("$dir/index.html");
       exit;
     }
   }
@@ -170,7 +196,6 @@ class Routy
     foreach (getallheaders() as $k => $v) {
       $headers[strtolower($k)] = $v;
     }
-    ;
     return $headers;
   }
 
@@ -267,7 +292,7 @@ class Routy
    */
   public function notFound(callable $handler): void
   {
-    $path = '/' . trim(join('', $this->path), '/');
+    $path = rtrim(join('', $this->path), '/') ?: '/';
     if ($path == '/' || preg_match("#^$path#", $this->uri)) {
       http_response_code(404);
       $handler($this);

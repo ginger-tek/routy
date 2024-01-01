@@ -29,7 +29,7 @@ $app->get('/things', function ($app) {
   $app->sendJson([ ... ]);
 });
 
-$app->get('/', fn ($app) => $app->sendJson(['msg' => 'Hello, world!']);
+$app->get('/', fn ($app) => $app->sendJson(['msg' => 'Hello, world!']));
 
 class Products {
   static function getAll($app) {

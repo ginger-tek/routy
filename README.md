@@ -1,5 +1,5 @@
 # routy
-A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, and middleware support
+A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, and middleware support.
 
 # Getting Started
 ## Composer
@@ -12,8 +12,8 @@ use GingerTek\Routy\Routy;
 
 $app = new Routy();
 ```
-
-You can also download the latest release and require `Routy.php` directly in your project. 
+## Vanilla
+You can also just download the latest release and require `Routy.php` directly in your files. 
 ```php
 require 'path/to/Routy.php';
 
@@ -42,29 +42,28 @@ $app->get('/products', '\Products::getAll');
 
 # Features
 
-## Routes
-Use the common methods for routing, or use `route()` to handle custom method routing
+## Common Method Wrappers
+Use the common method wrappers for routing GET, POST, PUT, PATCH, or DELETE method requests. There is also a catch-all wrapper for matching on all HTTP methods, including HEAD and OPTIONS.
 ```php
 $app->get('/products', ...); // HTTP GET
 $app->post('/products/:id', ...); // HTTP POST
 $app->put('/products', ...); // HTTP PUT
+$app->patch('/products/:id', ...); // HTTP PATCH
+$app->delete('/products/:id', ...); // HTTP PATCH
+$app->any('/products/:id', ...); // HTTP GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS
+```
+
+Use `*` for the path argument to match on any route.
+```php
+$app->get('*', ...); // HTTP GET for all routes
+$app->any('*', ...); // Any common HTTP method for all routes
+```
+
+## Custom Routing
+You can also use the `route()` method directly, which is what the common wrappers use underneath, to craft more specific route conditions on which to match.
+```php
 $app->route('GET|POST', '/form', ...); // HTTP GET and POST
-```
-
-Use `*` to match on any route path:
-```php
-$app->get('*', ...); // reached on all GET method routes
-$app->route('GET|POST|PUT', '*', ...); // reached on all GET, POST, and PUT method routes
-```
-
-### CORS Example
-You can also use the `route()` method to roll-your-own CORS handler:
-```php
-$app->route('GET|POST|PUT|DELETE|OPTIONS|HEAD', '*', function (Routy $app) {
-  header('Access-Control-Allow-Origin: *');
-  header('Access-Control-Allow-Headers: *');
-  if ($app->method == 'OPTIONS') $app->sendStatus(200);
-});
+$app->route('POST|PUT', '*', ...); // HTTP POST, and PUT for all routes
 ```
 
 ## Dynamic Routes
@@ -161,11 +160,12 @@ Intellisense should be sufficient, but here is a rudimentary explanation of all 
 - `params` - URI parameters
 
 ### Methods
-- `get(string $uri, callable ...$handlers)` - Add a GET route
-- `post(string $uri, callable ...$handlers)` - Add a POST route
-- `put(string $uri, callable ...$handlers)` - Add a PUT route
-- `patch(string $uri, callable ...$handlers)` - Add a PATCH route
-- `delete(string $uri, callable ...$handlers)` - Add a DELETE route
+- `get(string $uri, callable ...$handlers)` - Add an HTTP GET route
+- `post(string $uri, callable ...$handlers)` - Add an HTTP POST route
+- `put(string $uri, callable ...$handlers)` - Add an HTTP PUT route
+- `patch(string $uri, callable ...$handlers)` - Add an HTTP PATCH route
+- `delete(string $uri, callable ...$handlers)` - Add an HTTP DELETE route
+- `any(string $uri, callable ...$handlers)` - Add an HTTP GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS route
 - `route(string $method, string $uri, callable ...$handlers)` - Add a route that matches a method string, delimited by `|`
 - `group(string $base, callable ...$handlers)` - Add a grouped/nested collection of routes
 - `notFound(string $uri, callable ...$handlers)` - Add a fallback route to provide custom 404 handling

@@ -27,7 +27,7 @@ $app->get('/ajax', function (Routy $app) {
   </script>');
 });
 
-$app->with('/api', function (Routy $app) {
+$app->group('/api', function (Routy $app) {
   $app->get('/ajax', function (Routy $app) {
     $app->sendJson(['msg' => 'Hello, world!']);
   });

@@ -49,7 +49,7 @@ $app->get('/products', ...); // HTTP GET
 $app->post('/products/:id', ...); // HTTP POST
 $app->put('/products', ...); // HTTP PUT
 $app->patch('/products/:id', ...); // HTTP PATCH
-$app->delete('/products/:id', ...); // HTTP PATCH
+$app->delete('/products/:id', ...); // HTTP DELETE
 $app->any('/products/:id', ...); // HTTP GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS
 ```
 

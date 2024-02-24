@@ -8,6 +8,8 @@ composer require ginger-tek/routy
 ```
 
 ```php
+require 'vendor/autoload.php';
+
 use GingerTek\Routy\Routy;
 
 $app = new Routy();
@@ -17,33 +19,57 @@ You can also just download the latest release and require `Routy.php` directly i
 ```php
 require 'path/to/Routy.php';
 
+use GingerTek\Routy\Routy;
+
 $app = new Routy();
 ```
 
 ## Simple Example
-Handlers for each route can be any kind of callable, i.e. regular functions, arrow functions, static class methods.
+Handlers for each route can be any kind of callable, such as regular functions, arrow functions, closure variables, or static class methods as string references.
 ```php
 $app = new Routy();
 
-$app->get('/things', function ($app) {
+// Standard Function
+$app->get('/things', function (Routy $app) {
   $app->sendJson([ ... ]);
 });
 
-$app->get('/', fn ($app) => $app->sendJson(['msg' => 'Hello, world!']));
+// Arrow Function
+$app->get('/', fn (Routy $app) => $app->sendJson(['msg' => 'Hello, world!']));
 
-class Products {
+// Closure
+$handler = function (Routy $app) {
+  $app->sendJson([ ... ]);
+};
+
+$app->get('/closure', $handler);
+
+// Static Class Method
+class ProductsController {
   static function getAll($app) {
     $app->sendJson([ ... ]);
   }
 }
 
-$app->get('/products', '\Products::getAll');
+$app->get('/products', '\ProductsController::getAll');
+```
+
+# Configurations
+You can pass an associative array of optional configurations to the constructor.
+
+- `base` to set a global base URI when running from a sub-directory
+- `layout` to set a default layout template file to use in the `render()` reponse method
+```php
+$app = new Routy([
+  'base' => '/api',
+  'layout' => 'path/to/layout.php'
+])
 ```
 
 # Features
 
-## Common Method Wrappers
-Use the common method wrappers for routing GET, POST, PUT, PATCH, or DELETE method requests. There is also a catch-all wrapper for matching on all HTTP methods, including HEAD and OPTIONS.
+## Method Wrappers
+Use the method wrappers for routing GET, POST, PUT, PATCH, or DELETE method requests. There is also a catch-all wrapper for matching on all standard HTTP methods, including HEAD and OPTIONS.
 ```php
 $app->get('/products', ...); // HTTP GET
 $app->post('/products/:id', ...); // HTTP POST
@@ -53,127 +79,156 @@ $app->delete('/products/:id', ...); // HTTP DELETE
 $app->any('/products/:id', ...); // HTTP GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS
 ```
 
-Use `*` for the path argument to match on any route.
+Use `*` for the route argument to match on any route.
 ```php
 $app->get('*', ...); // HTTP GET for all routes
-$app->any('*', ...); // Any common HTTP method for all routes
+$app->any('*', ...); // Any standard HTTP method for all routes
 ```
 
 ## Custom Routing
 You can also use the `route()` method directly, which is what the common wrappers use underneath, to craft more specific route conditions on which to match.
 ```php
-$app->route('GET|POST', '/form', ...); // HTTP GET and POST
-$app->route('POST|PUT', '*', ...); // HTTP POST, and PUT for all routes
+$app->route('GET|POST', '/form', ...); // HTTP GET and POST for the /form route
+$app->route('GET|POST|PUT', '/products', ...); // HTTP GET, POST and PUT for the /products route
 ```
 
 ## Dynamic Routes
-To define dynamic route parameters, use the `:param` syntax and access them via the `params` property on the `$app` context.
+To define dynamic route parameters, use the `:param` syntax and access them via the `params` object on the `$app` context.
 ```php
-$app->get('/products/:id', function($app) {
+$app->get('/products/:id', function(Routy $app) {
   $id = $app->params->id;
   // ...
 });
 ```
 
 ## Middleware
-All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed. Use the native `$_REQUEST` and `$_SESSION` globals to share data between middleware/handlers.
+All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed.
+
+Use the native `$_REQUEST` and `$_SESSION` globals to share data between middleware/handlers.
 ```php
-function authenticate($app) {
+function authenticate(Routy $app) {
   if(!($token = @$app->getHeaders()['authorization']))
-    $app->sendStatus(401);
+    $app->end(401);
   $_REQUEST['user'] = parseToken($token);
 }
 
-$app->get('/products', 'authenticate', function ($app) {
+$app->get('/products', 'authenticate', function (Routy $app) {
   $userId = $_REQUEST['user']->id;
   $items = getProductsByUser($userId);
   $app->sendJson($items);
 });
 ```
 
-## Grouped/Nested Routes
-You can define grouped/nested routes using the `group()` method.
+## Route Groups
+You can define route groups using the `group()` method.
 ```php
 $app = new Routy();
 
-$app->group('/products', function ($app) {
-  $app->get('/', fn ($app) => $app->sendJson([]));
+$app->group('/products', function (Routy $app) {
+  $app->post('/', ...);
+  $app->get('/', ...);
+  $app->get('/:id', ...);
+  $app->patch('/:id', ...);
 });
 ```
 
 You can also add middleware to your nested routes
 ```php
-$app->group('/products', 'authenticate', function ($app) {
-  $app->get('/', fn ($app) => $app->sendJson([]));
+$app->group('/products', 'authenticate', function (Routy $app) {
+  $app->get('/', ...);
 });
 ```
 
-## Custom Fallback Routes (404)
-To set custom 404 responses, use the `notFound()` method to set a handler function.
-```php
-$app = new Routy();
+## Fallback Routes
+To set a fallback route, use the `notFound()` method to set a handler function that will have the HTTP 404 response header already set.
 
-//... other routes
-
-$app->notFound(function ($app) {
-  $app->sendJson(['error' => 'Resource not found']);
-});
-```
-
-### Nested Fallback Routes
-You can also define separate 404 fallbacks for separate nested/grouped routes.
+Fallback routes are scoped to wherever they are defined, and will only be reached if they match the incoming URI's parent path.
 ```php
 $app = new Routy();                        
 
-$app->group('/products', function ($app) {
-  $app->get('/', fn ($app) => $app->sendJson([]));
+$app->group('/products', function (Routy $app) {
+  $app->get('/', fn (Routy $app) => $app->sendJson([]));
 
   // GET /products/asdf will end up here
-  $app->notFound(function ($app) { ... });
+  $app->notFound(function (Routy $app) { ... });
 });
 
 // GET /asdf will end up here
-$app->notFound(function ($app) { ... });
+$app->notFound(function (Routy $app) { ... });
 ```
 
-**NOTE: Fallbacks will be reached in the order they are added, so be aware of your nesting order**
+## Request Helper Methods
+There are few helper methods for handling incoming request payloads.
 
-## Static Files
-You can serve static asset files using the `static()` method. This is useful for serving a SPA app alongside a REST API, which both be served from the same Routy app using this method.
+Use `getBody()` to retrieve the incoming payload data. JSON data will automatically be decoded, and form URL encoded data will be accessible as a standard object.
 ```php
-// will serve files from the 'public' dir on the root URI
-$app->static('public');
+$app->get('/products', function (Routy $app) {
+  $body = $app->getBody();
 
-// will serve files from the 'public' dir on the /app URI
-$app->static('public', '/app');
+  // JSON
+  // { "someProperty": "asdf" }
+  $body->someProperty;
+
+  // Form Data
+  // <input name="username">
+  $body->username;
+});
 ```
 
-**NOTE: This must only be defined AFTER all the other routes in order to work as intended**
+Use `getHeaders()` to retrieve the incoming HTTP headers in an associative array, each header key is auto-lowercased for standardization.
+```php
+$app->get('/products', function (Routy $app) {
+  $headers = $app->getHeaders();
+  // Authorization: Bearer eyhdgs9d8fg9s7d87f...
+  $headers['authorization'];
+});
+```
 
-# Docs
-Intellisense should be sufficient, but here is a rudimentary explanation of all the properties and methods.
+## Response Helper Methods
+There are plenty of helper methods for handling responses.
 
-## `Routy (class)`
-### Properties
-- `method` - Request HTTP method
-- `uri` - Request URI path
-- `params` - URI parameters
+Use `sendJson()` to return data as a JSON string
+```php
+$app->sendJson(['prop' => 'value']); // { "prop": "value" }
+$app->sendJson([1,2,3,4,5]); // [1,2,3,4,5]
+```
 
-### Methods
-- `get(string $uri, callable ...$handlers)` - Add an HTTP GET route
-- `post(string $uri, callable ...$handlers)` - Add an HTTP POST route
-- `put(string $uri, callable ...$handlers)` - Add an HTTP PUT route
-- `patch(string $uri, callable ...$handlers)` - Add an HTTP PATCH route
-- `delete(string $uri, callable ...$handlers)` - Add an HTTP DELETE route
-- `any(string $uri, callable ...$handlers)` - Add an HTTP GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS route
-- `route(string $method, string $uri, callable ...$handlers)` - Add a route that matches a method string, delimited by `|`
-- `group(string $base, callable ...$handlers)` - Add a grouped/nested collection of routes
-- `notFound(string $uri, callable ...$handlers)` - Add a fallback route to provide custom 404 handling
-- `static(string $dir, string $uri)` - Server static files from a directory path (useful for serving JS/CSS/img/font assets). Optionally specify what URI under which to serve the files
-- `getHeaders()` - Returns request HTTP headers as associative array
-- `getBody()` - Returns request body
-- `setStatus(int $code)` - Sets HTTP response code and returns app context instance for method chaining
-- `sendStatus(int $code)` - Sends HTTP response code
-- `sendRedirect(string $uri, bool $permanent)` - Sends a HTTP 302 redirect to the specified route. When second arg is true, sends HTTP 301 instead
-- `sendData(string $data)` - Sends string data as text. If path to file, sends file contents
-- `sendJson(mixed $data)` - Sends data as JSON string
+Use `sendData()` to return string data or a file's raw contents
+```php
+$app->sendData('<h1>Raw HTML</h1>');
+$app->sendData('path/to/file.html');
+```
+Use `redirect()` to send a temporary or permanent redirect to a new URL
+```php
+$app->redirect('/go/here');
+$app->redirect('/new/permanent/location', true);
+```
+
+Use `render()` to render a PHP template file and view file, using standard PHP includes and variable scope extraction
+```php
+// Using options arguments
+$app->render(['layout' => 'path/to/layout.php', 'view' => 'path/to/view.php']);
+
+// Using default layout set via constructor config
+$app = new Render(['layout' => 'path/to/layout.php']);
+$app->get('/', function (Routy $app) {
+  $app->render(['view' => 'views/home.php'])
+});
+$app->get('/about', function (Routy $app) {
+  $app->render(['view' => 'views/about.php'])
+});
+```
+
+Use `status()` to set the HTTP status code. This can be used for method chaining to other response methods
+```php
+$app->post('/products', function (Routy $app) {
+  $app->status(400)->sendJson(['error' => 'Bad payload']);
+  // or
+  $app->status(201)->sendData('Successfully created!');
+});
+```
+
+Use `end()` to return immediately with a specified HTTP status code
+```php
+$app->end(401); // Unauthorized
+```

@@ -283,7 +283,7 @@ class Routy
    * @param int $code The HTTP response code to send
    * @return void
    */
-  public function end(int $code): void
+  public function end(int $code = 200): void
   {
     $this->status($code);
     exit;

@@ -140,6 +140,8 @@ $app->group('/products', 'authenticate', function (Routy $app) {
 ```
 
 ## Fallback Routes
+Fallbacks are used for returning custom 404 responses, or to perform other logic before returning.
+
 To set a fallback route, use the `notFound()` method to set a handler function that will have the HTTP 404 response header already set.
 
 Fallback routes are scoped to wherever they are defined, and will only be reached if they match the incoming URI's parent path.

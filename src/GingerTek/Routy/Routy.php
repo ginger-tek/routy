@@ -2,7 +2,7 @@
 
 /**
  * @author      GingerTek
- * @copyright   Copyright (c), 2023 GingerTek
+ * @copyright   Copyright (c), GingerTek
  * @license     MIT public license
  */
 
@@ -14,35 +14,48 @@ namespace GingerTek\Routy;
 class Routy
 {
   /**
-   * @var string The URI of the incoming request
+   * @var string The URI of the incoming request.
    */
   public string $uri;
 
   /**
-   * @var string The HTTP method of the incoming request
+   * @var string The HTTP method of the incoming request.
    */
   public string $method;
 
   /**
-   * @var object Available route parameters parsed from the URI
+   * @var object Available route parameters parsed from the URI.
    */
   public ?object $params;
 
   /**
-   * @var array Internal array of URI parts for handling grouped/nested matching
+   * @var array Internal array of URI parts for handling grouped/nested matching.
    */
   private array $path;
 
-  function __construct()
+  /**
+   * @var string Internal string path to default layout template file to use for render() method.
+   */
+  private ?string $layout;
+
+  /**
+   * Takes an optional argument array for configurations.
+   * - base = set a global base URI when running from a sub-directory
+   * - layout = set a default layout template file to use in render() method
+   * 
+   * @param array $config
+   */
+  function __construct(array $config = [])
   {
     $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
-    $this->path = [];
+    $this->path = isset($config['base']) ? [$config['base']] : [];
     $this->params = null;
+    $this->layout = $config['layout'] ?? null;
   }
 
   /**
-   * Defines a route on which to match the incoming URI and HTTP method(s) against
+   * Defines a route on which to match the incoming URI and HTTP method(s) against.
    *
    * @param string   $method   Allowed methods, | delimited
    * @param string   $route    A route pattern, i.e. /api/things
@@ -63,15 +76,16 @@ class Routy
   }
 
   /**
-   * Defines nested group of routes on which to match the incoming URI and HTTP method against
+   * Defines nested group of routes on which to match the incoming URI and HTTP method against.
    *
    * @param string   $base     Base of the group route, i.e. /products
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function group(string $base, callable ...$handlers): void
   {
     $this->path[] = $base;
-    if (str_contains($this->uri, join('', $this->path))) {
+    if (str_starts_with($this->uri, $base)) {
       foreach ($handlers as $handler)
         $handler($this);
     }
@@ -79,10 +93,11 @@ class Routy
   }
 
   /**
-   * Defines an HTTP GET route on which to match the incoming URI against
+   * Defines an HTTP GET route on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function get(string $route, callable ...$handlers): void
   {
@@ -90,10 +105,11 @@ class Routy
   }
 
   /**
-   * Defines an HTTP POST route on which to match the incoming URI against
+   * Defines an HTTP POST route on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function post(string $route, callable ...$handlers): void
   {
@@ -101,10 +117,11 @@ class Routy
   }
 
   /**
-   * Defines an HTTP PUT route on which to match the incoming URI against
+   * Defines an HTTP PUT route on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function put(string $route, callable ...$handlers): void
   {
@@ -112,10 +129,11 @@ class Routy
   }
 
   /**
-   * Defines an HTTP PATCH route on which to match the incoming URI against
+   * Defines an HTTP PATCH route on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function patch(string $route, callable ...$handlers): void
   {
@@ -123,10 +141,11 @@ class Routy
   }
 
   /**
-   * Defines an HTTP DELETE route on which to match the incoming URI against
+   * Defines an HTTP DELETE route on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function delete(string $route, callable ...$handlers): void
   {
@@ -134,11 +153,11 @@ class Routy
   }
 
   /**
-   * Defines a route for any common HTTP method on which to match the incoming URI against.
-   * The matching HTTP methods include: GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS
+   * Defines a route for any standard HTTP method on which to match the incoming URI against.
    *
    * @param string   $route    A route pattern, i.e. /api/things
    * @param callable $handlers The handling function(s) to be executed
+   * @return void
    */
   public function any(string $route, callable ...$handlers): void
   {
@@ -146,62 +165,22 @@ class Routy
   }
 
   /**
-   * Serves static files from a directory. Useful for SPA's to serve JS/CSS/image/font assets.
-   * Must be set after all other routes/nested groups to work properly
-   *
-   * @param string $dir  Path to directory to serve
-   * @param string $path URI path on which to serve
-   */
-  public function static(string $dir, string $path = '/'): void
-  {
-    if (!str_contains('GET|HEAD|OPTIONS', $this->method)) {
-      header('Allow: GET, HEAD');
-      header('Content-Length: 0');
-      exit;
-    }
-    if ($path == '/' || preg_match("#^$path#", $this->uri)) {
-      $item = $dir . $this->uri;
-      if (file_exists($item) && is_file($item)) {
-        header('Content-Type: ' . match (pathinfo($item, PATHINFO_EXTENSION)) {
-          'js' => 'application/javascript',
-          'css' => 'text/css',
-          'woff' => 'font/woff',
-          'woff2' => 'font/woff2',
-          'json' => 'application/json',
-          'xml' => 'application/xml',
-          'png' => 'image/png',
-          'jpeg', 'jpg' => 'image/jpeg',
-          'webp' => 'image/webp',
-          'webm' => 'image/webm',
-          'gif' => 'image/gif',
-          'bmp' => 'image/bmp',
-          'ico' => 'image/ico',
-          'tiff', 'tif' => 'image/tiff',
-          'svg', 'svgz' => 'image/svg+xml',
-          default => mime_content_type($item)
-        });
-        echo file_get_contents($item);
-      } else echo file_get_contents("$dir/index.html");
-      exit;
-    }
-  }
-
-  /**
    * Returns an associative array of HTTP headers on the incoming request.
-   * All the keys are lower-cased to standardize referencing
+   * All keys are lower-cased to standardize referencing.
+   * 
+   * @return array
    */
   public function getHeaders(): array
   {
-    $headers = [];
-    foreach (getallheaders() as $k => $v) {
-      $headers[strtolower($k)] = $v;
-    }
-    return $headers;
+    $headers = getallheaders();
+    return array_combine(array_map('strtolower', array_keys($headers)), array_values($headers));
   }
 
   /**
    * Returns the body of the incoming request.
-   * The return type is determined by the Content-Type header, otherwise the raw data is returned
+   * The return type is determined by the Content-Type header, otherwise the raw data is returned.
+   * 
+   * @return mixed
    */
   public function getBody(): mixed
   {
@@ -215,16 +194,16 @@ class Routy
   }
 
   /**
-   * Sends an HTTP 302 redirect repsonse.
-   * If the second argument is true, an HTTP 301 redirect will be returned instead.
-   * Immediately stops execution and returns to client
+   * Sends an HTTP 301 (permanent) or 304 (temporary) redirect response to the specified URL location.
+   * Immediately stops execution and returns to client.
    * 
-   * @param string $uri       The new location URI
-   * @param bool   $permanent If set, will perform a 301 (permanent) redirect
+   * @param string $uri         The new location URI
+   * @param bool   $isPermanent If set, will perform a 301 (permanent) redirect
+   * @return void
    */
-  public function sendRedirect(string $uri, bool $permanent = false): void
+  public function redirect(string $uri, bool $isPermanent = false): void
   {
-    http_response_code($permanent ? 301 : 302);
+    http_response_code($isPermanent ? 301 : 302);
     header("location: $uri");
     exit;
   }
@@ -232,10 +211,11 @@ class Routy
   /**
    * Sends string data as the response. The content type on the response can be overridden via the optional second argument.
    * If the string data is a path to a file, the contents of the file will be sent and the content type will be the file's detected MIME type, unless specified explicitly by the second argument.
-   * Immediately stops execution and returns to client
+   * Immediately stops execution and returns to client.
    * 
    * @param string $data      The string data to send
    * @param bool   $permanent If set, will perform a 301 (permanent) redirect
+   * @return void
    */
   public function sendData(string $data, string $contentType = null): void
   {
@@ -243,7 +223,8 @@ class Routy
       header('content-type: ' . ($contentType ?? mime_content_type($data)));
       echo file_get_contents($data);
     } else {
-      if ($contentType) header("content-type: $contentType");
+      if ($contentType)
+        header("content-type: $contentType");
       echo $data;
     }
     exit;
@@ -251,9 +232,10 @@ class Routy
 
   /**
    * Sends any data as a JSON string as the response.
-   * Immediately stops execution and returns to client
+   * Immediately stops execution and returns to client.
    * 
    * @param int $code The HTTP response code to send
+   * @return void
    */
   public function sendJson(mixed $data): void
   {
@@ -261,12 +243,34 @@ class Routy
   }
 
   /**
+   * Renders layout file using standard PHP templating via includes.
+   * All other variables in argument array are extracted to and made available within the rendering scope.
+   * - layout = overrides the default layout file
+   * - view   = path to view file
+   * 
+   * @param array $options
+   * @return void
+   */
+  public function render(array $options): void
+  {
+    $options['layout'] ??= $this->layout;
+    if (!@$options['layout'])
+      throw new \Exception('Missing layout argument');
+    if (!@$options['view'])
+      throw new \Exception('Missing view argument');
+    extract($options, EXTR_OVERWRITE);
+    include $options['layout'];
+    exit;
+  }
+
+  /**
    * Sets the HTTP response code on the response.
    * Returns the current instance of Routy for method chaining
    * 
-   * @param int $code The HTTP response code to send
+   * @param int $code The HTTP response code to set
+   * @return Routy;
    */
-  public function setStatus(int $code): Routy
+  public function status(int $code): Routy
   {
     http_response_code($code);
     return $this;
@@ -274,29 +278,27 @@ class Routy
 
   /**
    * Sends an HTTP response code as the response.
-   * Immediately stops execution and returns to client
+   * Immediately stops execution and returns to client.
    * 
    * @param int $code The HTTP response code to send
+   * @return void
    */
-  public function sendStatus(int $code): void
+  public function end(int $code): void
   {
-    $this->setStatus($code);
+    $this->status($code);
     exit;
   }
 
   /**
-   * Sends a custom HTTP 404 response based on current route scope.
-   * Immediately stops execution and returns to client if the requesting URI matches the current route scope
+   * Shorthand for sending a custom HTTP 404 response based on current route.
+   * Immediately stops execution and returns to client.
    * 
-   * @param int $code The HTTP response code to send
+   * @return void
    */
   public function notFound(callable $handler): void
   {
-    $path = rtrim(join('', $this->path), '/') ?: '/';
-    if ($path == '/' || preg_match("#^$path#", $this->uri)) {
-      http_response_code(404);
-      $handler($this);
-      exit;
-    }
+    $this->status(404);
+    $handler($this);
+    exit;
   }
 }

@@ -85,7 +85,7 @@ class Routy
   public function group(string $base, callable ...$handlers): void
   {
     $this->path[] = $base;
-    if (str_starts_with($this->uri, $base)) {
+    if (str_starts_with($this->uri, join($this->path))) {
       foreach ($handlers as $handler)
         $handler($this);
     }

@@ -159,6 +159,15 @@ $app->group('/products', function (Routy $app) {
 $app->notFound(function (Routy $app) { ... });
 ```
 
+## Request Properties
+You can access the incoming HTTP method and URI via the `uri` and `method` properties on the `$app` instance.
+```php
+$app->get('/', function (Routy $app) {
+  $app->uri;
+  $app->method;
+});
+```
+
 ## Request Helper Methods
 There are few helper methods for handling incoming request payloads.
 

@@ -243,23 +243,26 @@ class Routy
   }
 
   /**
-   * Renders layout file using standard PHP templating via includes.
-   * All other variables in argument array are extracted to and made available within the rendering scope.
-   * - layout = overrides the default layout file
-   * - view   = path to view file
+   * Renders a view using standard PHP templating via includes.
+   * Options:
+   * - layout = Optional; Overrides default layout. If set to false, will render without layout
+   * - model  = Optional; Array of variables to expose to the template context
    * 
-   * @param array $options
+   * @param string $view
+   * @param array  $options
    * @return void
    */
-  public function render(array $options): void
+  public function render(string $view, array $options = []): void
   {
-    $options['layout'] ??= $this->layout;
-    if (!@$options['layout'])
-      throw new \Exception('Missing layout argument');
-    if (!@$options['view'])
-      throw new \Exception('Missing view argument');
-    extract($options, EXTR_OVERWRITE);
-    include $options['layout'];
+    $options['layout'] ??= $this->layout ?? null;
+    if (@$options['layout']) {
+      $options['view'] = $view;
+      extract($options, EXTR_OVERWRITE);
+      include $options['layout'];
+    } else {
+      extract($options, EXTR_OVERWRITE);
+      include $view;
+    }
     exit;
   }
 

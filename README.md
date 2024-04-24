@@ -215,19 +215,26 @@ $app->redirect('/go/here');
 $app->redirect('/new/permanent/location', true);
 ```
 
-Use `render()` to render a PHP template file and view file, using standard PHP includes and variable scope extraction
+Use `render()` to render a PHP view file, using standard PHP includes and variable scope extraction
 ```php
-// Using options arguments
-$app->render(['layout' => 'path/to/layout.php', 'view' => 'path/to/view.php']);
+// Using options to override layout
+$app->render('path/to/view.php', ['layout' => 'path/to/layout.php']);
 
 // Using default layout set via constructor config
-$app = new Render(['layout' => 'path/to/layout.php']);
-$app->get('/', function (Routy $app) {
-  $app->render(['view' => 'views/home.php'])
-});
-$app->get('/about', function (Routy $app) {
-  $app->render(['view' => 'views/about.php'])
-});
+$app = new Routy(['layout' => 'path/to/layout.php']);
+...
+$app->render('views/home.php');
+$app->render('views/about.php')
+
+// Using options to render without a layout
+$app->render('path/to/view.php', ['layout' => false]);
+
+// Passing in a data model to expose to the template context
+$app->render('path/to/view.php', [
+  'model' => [
+    'someProperty' => 'some data'
+  ]
+]);
 ```
 
 Use `status()` to set the HTTP status code. This can be used for method chaining to other response methods

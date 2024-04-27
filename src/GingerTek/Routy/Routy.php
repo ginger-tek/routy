@@ -340,7 +340,7 @@ class Routy
    * 
    * @return void
    */
-  public function serveStatic(string $path, bool $fallback = false): void
+  public function serveStatic(string $path, bool $fallback = true): void
   {
     $path .= $this->uri;
     if (file_exists($path)) {
@@ -438,7 +438,7 @@ class Routy
       };
       $this->sendData($path, $mime);
     }
-    if (!$fallback)
+    if ($fallback)
       $this->end(404);
   }
 }

@@ -202,14 +202,22 @@ class Routy
   }
 
   /**
-   * Returns any files sent with the incoming request.
-   * The return type is determined by the Content-Type header, otherwise the raw data is returned.
+   * Returns uploaded file(s) by field name as an object if single-file upload and object array if multi-file upload.
    * 
    * @return mixed
    */
-  public function getFiles(): object
+  public function getFiles(string $name): object|array
   {
-    return (object) $_FILES;
+    $files = [];
+    $vector = @$_FILES[$name] ?? [];
+    if (!is_array($vector['name']))
+      return (object) $vector;
+    foreach ($vector as $key1 => $value1) {
+      foreach ($value1 as $key2 => $value2) {
+        $files[$key2][$key1] = $value2;
+      }
+    }
+    return $files;
   }
 
   /**
@@ -326,8 +334,9 @@ class Routy
 
   /**
    * Serve static files at the base URI from a specified directory.
-   * WARN: This may not be as performant as serving files directly from your web server.
-   * INFO: MIME types referenced from https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types.
+   * NOTE: This may not be as performant as serving files from your web server directly.
+   * NOTE: Use at your discretion with consideration for the speed of your application.
+   * NOTE: MIME types referenced from https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types.
    * 
    * @return void
    */

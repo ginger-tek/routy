@@ -1,5 +1,5 @@
 # routy
-A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, and middleware support.
+A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, middleware support, and more!
 
 # Getting Started
 ## Composer
@@ -31,15 +31,15 @@ $app = new Routy();
 
 // Standard Function
 $app->get('/things', function (Routy $app) {
-  $app->sendJson([ ... ]);
+  $app->sendData('Hello!');
 });
 
 // Arrow Function
-$app->get('/', fn (Routy $app) => $app->sendJson(['msg' => 'Hello, world!']));
+$app->get('/', fn (Routy $app) => $app->sendData('Hello!'););
 
 // Closure
 $handler = function (Routy $app) {
-  $app->sendJson([ ... ]);
+  $app->sendData('Hello!');
 };
 
 $app->get('/closure', $handler);
@@ -47,11 +47,11 @@ $app->get('/closure', $handler);
 // Static Class Method
 class ProductsController {
   static function getAll($app) {
-    $app->sendJson([ ... ]);
+    $app->sendData('Hello!');
   }
 }
 
-$app->get('/products', '\ProductsController::getAll');
+$app->get('/products', \ProductsController::getAll(...));
 ```
 
 # Configurations
@@ -159,19 +159,43 @@ $app->group('/products', function (Routy $app) {
 $app->notFound(function (Routy $app) { ... });
 ```
 
+## Serve Static Files (SPA)
+For convenience, you can serve static files from the base URI, such as for a SPA frontend, directly from the same app.
+
+To do this, use the `serveStatic()` method **after** all the other route definitions
+```php
+$app = new Routy();
+
+// all routes defined here
+
+$app->serveStatic('public');
+```
+
+If a file is not found, a generic HTTP 404 will be returned by default. You can override this if you want by setting the second parameter to `false`, and then either defining a custom or generic fallback right after it
+```php
+$app->serveStatic('public', false);
+
+$app->notFound(fn() =>$app->sendData('404.html'));
+// or
+$app->end(404);
+```
+
 ## Request Properties
-You can access the incoming HTTP method and URI via the `uri` and `method` properties on the `$app` instance.
+You can access the incoming HTTP method and URI via the `uri`, `method`, and `params`, and `query` properties on the `$app` instance.
 ```php
 $app->get('/', function (Routy $app) {
   $app->uri;
   $app->method;
+  $app->params;
+  $app->query;
 });
 ```
 
 ## Request Helper Methods
 There are few helper methods for handling incoming request payloads.
 
-Use `getBody()` to retrieve the incoming payload data. JSON data will automatically be decoded, and form URL encoded data will be accessible as a standard object.
+### `getBody()`
+Use to retrieve the incoming payload data. JSON data will automatically be decoded, and form URL encoded data will be accessible as a standard object.
 ```php
 $app->get('/products', function (Routy $app) {
   $body = $app->getBody();
@@ -179,65 +203,105 @@ $app->get('/products', function (Routy $app) {
   // JSON
   // { "someProperty": "asdf" }
   $body->someProperty;
-
-  // Form Data
-  // <input name="username">
-  $body->username;
+  $body->username; // From: <input name="username">
 });
 ```
 
-Use `getHeaders()` to retrieve the incoming HTTP headers in an associative array, each header key is auto-lowercased for standardization.
+### `getHeaders()`
+Use to retrieve the incoming HTTP headers in an associative array, each header key is auto-lowercased for standardization.
 ```php
 $app->get('/products', function (Routy $app) {
   $headers = $app->getHeaders();
-  // Authorization: Bearer eyhdgs9d8fg9s7d87f...
-  $headers['authorization'];
+  $headers['authorization']; // Bearer eyhdgs9d8fg9s7d87f...
+});
+```
+
+### `getFiles()`
+Use to retrieve uploaded files from multipart/form-data requests. Returns an object for single-file uploads, and an object array for multi-file uploads.
+```html
+<form method="POST" action="/upload" enctype="multipart/form-data">
+  <input type="file" name="multi[]" multiple required>
+  <input type="file" name="single" required>
+  <button type="submit">
+</form>
+```
+```php
+$app->post('/upload', function (Routy $app) {
+  $multipleFiles = $app->getFiles('multi'); // object array
+  $singleFile = $app->getFiles('single'); // object
 });
 ```
 
 ## Response Helper Methods
 There are plenty of helper methods for handling responses.
 
-Use `sendJson()` to return data as a JSON string
+### `sendJson()`
+Use to return data as a JSON string
 ```php
 $app->sendJson(['prop' => 'value']); // { "prop": "value" }
-$app->sendJson([1,2,3,4,5]); // [1,2,3,4,5]
+$app->sendJson([1, 2, {'three' => 4}, 5]); // [1, 2, { "three: 4 }, 5]
 ```
 
-Use `sendData()` to return string data or a file's raw contents
+### `sendData()`
+Use to return string data or a file's raw contents
 ```php
 $app->sendData('<h1>Raw HTML</h1>');
 $app->sendData('path/to/file.html');
 ```
-Use `redirect()` to send a temporary or permanent redirect to a new URL
+
+### `redirect()`
+Use to send a temporary or permanent redirect to a new URL
 ```php
-$app->redirect('/go/here');
-$app->redirect('/new/permanent/location', true);
+$app->redirect('/go/here'); // HTTP 302
+$app->redirect('/new/permanent/location', true); // HTTP 301
 ```
 
-Use `render()` to render a PHP view file, using standard PHP includes and variable scope extraction
-```php
-// Using options to override layout
-$app->render('path/to/view.php', ['layout' => 'path/to/layout.php']);
+### `render()`
+Use to render a PHP view file, using standard PHP includes and variable scope extraction for MCV modeling
 
-// Using default layout set via constructor config
+You can set a default layout via the constructor config to use
+```php
 $app = new Routy(['layout' => 'path/to/layout.php']);
 ...
 $app->render('views/home.php');
 $app->render('views/about.php')
+```
 
-// Using options to render without a layout
+You can also override the default by settings the `layout` option to another path
+```php
+$app = new Routy(['layout' => 'path/to/layout1.php']);
+...
+$app->render('path/to/view.php', ['layout' => 'path/to/layout2.php']);
+```
+
+Or you can use no layout by setting the `layout` option to `false`
+```php
+$app = new Routy(['layout' => 'path/to/layout.php']);
+...
 $app->render('path/to/view.php', ['layout' => false]);
+```
 
-// Passing in a data model to expose to the template context
+You may also not specify a layout at all, and just render files as is
+```php
+$app = new Routy();
+...
+$app->render('path/to/view.php');
+```
+
+Finally, set the `model` option to pass in a data model to expose to the template context in your view files
+```php
 $app->render('path/to/view.php', [
   'model' => [
     'someProperty' => 'some data'
   ]
 ]);
+
+// view.php
+<div><?= $model->someProperty ?></div>
 ```
 
-Use `status()` to set the HTTP status code. This can be used for method chaining to other response methods
+### `status()`
+Use to set the HTTP status code. This can be used for method chaining to other response methods
 ```php
 $app->post('/products', function (Routy $app) {
   $app->status(400)->sendJson(['error' => 'Bad payload']);
@@ -246,7 +310,10 @@ $app->post('/products', function (Routy $app) {
 });
 ```
 
-Use `end()` to return immediately with a specified HTTP status code
+### `end()`
+Use to return immediately with an optional HTTP status code
 ```php
+$app->end(); // Success
 $app->end(401); // Unauthorized
+$app->end(404); // Not Found
 ```

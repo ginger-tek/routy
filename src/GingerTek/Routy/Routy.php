@@ -29,7 +29,7 @@ class Routy
   public ?object $params;
 
   /**
-   * @var array Available URL query parameters from the URL.
+   * @var object Available URL query parameters from the URL.
    */
   public ?object $query;
 

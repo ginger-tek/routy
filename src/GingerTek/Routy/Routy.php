@@ -90,7 +90,7 @@ class Routy
    */
   public function group(string $base, callable ...$handlers): void
   {
-    $this->path[] = $base;
+    $this->path[] = trim($base, '/');
     if (str_starts_with($this->uri, join($this->path))) {
       foreach ($handlers as $handler)
         $handler($this);

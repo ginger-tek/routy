@@ -203,22 +203,18 @@ class Routy
   }
 
   /**
-   * Returns uploaded file(s) by field name as an object if single-file upload and object array if multi-file upload.
+   * Returns uploaded file(s) by field name as an object array.
+   * Returns null if not a multipart/form-data submission, field not found, or if field is empty.
    * 
-   * @return mixed
+   * @return array|null
    */
-  public function getFiles(string $name): object|array
+  public function getFiles(string $name): array|null
   {
-    $files = [];
-    $vector = @$_FILES[$name] ?? [];
-    if (!is_array($vector['name']))
-      return (object) $vector;
-    foreach ($vector as $key1 => $value1) {
-      foreach ($value1 as $key2 => $value2) {
-        $files[$key2][$key1] = $value2;
-      }
-    }
-    return $files;
+    $arr = $_FILES[$name] ?? false;
+    if (!$arr || !$arr['name'] || !$arr['name'][0]) return null;
+    if (!is_array(@$arr['name'])) return [(object)$arr];
+    $keys = array_keys($arr);
+    return array_map(fn ($i) => (object)array_combine($keys, array_map(fn ($k) => $arr[$k][$i], $keys)), range(0, count(end($arr)) - 1));
   }
 
   /**

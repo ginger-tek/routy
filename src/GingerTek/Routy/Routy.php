@@ -92,7 +92,7 @@ class Routy
   {
     if ($base != '/')
       $this->path[] = '/' . trim($base, '/');
-    if (str_starts_with($this->uri, join($this->path))) {
+    if (preg_match('#' . join($this->path) . '(?:\/|$)#', $this->uri)) {
       foreach ($handlers as $handler)
         $handler($this);
     }

@@ -1,4 +1,4 @@
-# routy
+# Routy
 A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, middleware support, and more!
 
 # Getting Started

@@ -1,8 +1,6 @@
 <?php
 
-require '../src/GingerTek/Routy/Routy.php';
-
-use GingerTek\Routy\Routy;
+require '../../GingerTek/Routy.php';
 
 $app = new Routy(['layout' => 'layout.php']);
 
@@ -11,7 +9,6 @@ $app->get('/*', function (Routy $app) {
   <ul>
     <li><a href="/form">POST Form</a></li>
     <li><a href="/form-multipart">POST Form (multipart)</a></li>
-    <li><a href="/ajax">AJAX Form</a></li>
     <li><a href="/ajax">AJAX Form</a></li>
   </ul>');
 });
@@ -53,7 +50,7 @@ $app->route('GET|POST', '/form', function (Routy $app) {
   $app->sendData('<h1>Tests</h1>
   <p><a href="/">Back</a></p>
   <form method="post">
-    <input name="test">
+    <input name="test" required>
     <button type="submit">Submit</button>
   </form>
   <p>Submitted data: ' . @$data . '</p>');
@@ -62,26 +59,17 @@ $app->route('GET|POST', '/form', function (Routy $app) {
 $app->route('GET|POST', '/form-multipart', function (Routy $app) {
   if ($app->method == 'POST') {
     $data = $_POST['test'];
-    $len = count(end($_FILES)['name']);
-    $arr = [];
-    foreach (range(0, $len - 1) as $i) {
-      foreach ($_FILES as $file) {
-        $arr[] = array_keys($file);
-        $arr[] = (object)[
-          'name' => $file['name'][$i]
-        ];
-      }
-    }
+    $files = $app->getFiles('files');
   }
   $app->sendData('<h1>Tests</h1>
   <p><a href="/">Back</a></p>
   <form method="post" enctype="multipart/form-data">
-    <input name="test">
-    <input name="files[]" type="file" multiple>
+    <input name="test" required>
+    <input name="files[]" type="file" multiple required>
     <button type="submit">Submit</button>
   </form>
   <p>Submitted data: ' . @$data . '</p>
-  <p>File uploaded: ' . json_encode(@$arr) . '</p>');
+  <p style="font-family:monospace;white-space:pre-wrap">File(s) uploaded: ' . json_encode(@$files, JSON_PRETTY_PRINT) . '</p>');
 });
 
 $app->status(404)->sendData('<h1>Page not found</h4>');

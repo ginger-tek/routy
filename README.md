@@ -14,18 +14,9 @@ use GingerTek\Routy\Routy;
 
 $app = new Routy();
 ```
-## Vanilla
-You can also just download the latest release and require `Routy.php` directly in your files. 
-```php
-require 'path/to/Routy.php';
 
-use GingerTek\Routy\Routy;
-
-$app = new Routy();
-```
-
-## Simple Example
-Handlers for each route can be any kind of callable, such as regular functions, arrow functions, closure variables, or static class methods as string references.
+## Starter Example
+Handlers for each route can be any kind of callable, such as regular functions, arrow functions, closure variables, or static class methods.
 ```php
 $app = new Routy();
 
@@ -112,7 +103,7 @@ function authenticate(Routy $app) {
   $_REQUEST['user'] = parseToken($token);
 }
 
-$app->get('/products', 'authenticate', function (Routy $app) {
+$app->get('/products', authenticate(...), function (Routy $app) {
   $userId = $_REQUEST['user']->id;
   $items = getProductsByUser($userId);
   $app->sendJson($items);
@@ -134,7 +125,7 @@ $app->group('/products', function (Routy $app) {
 
 You can also add middleware to your nested routes
 ```php
-$app->group('/products', 'authenticate', function (Routy $app) {
+$app->group('/products', authenticate(...), function (Routy $app) {
   $app->get('/', ...);
 });
 ```
@@ -212,23 +203,23 @@ Use to retrieve the incoming HTTP headers in an associative array, each header k
 ```php
 $app->get('/products', function (Routy $app) {
   $headers = $app->getHeaders();
-  $headers['authorization']; // Bearer eyhdgs9d8fg9s7d87f...
+  $headers->authorization; // Bearer eyhdgs9d8fg9s7d87f...
 });
 ```
 
 ### `getFiles()`
-Use to retrieve uploaded files from multipart/form-data requests. Returns an object for single-file uploads, and an object array for multi-file uploads.
+Use to retrieve uploaded files from multipart/form-data requests. Returns an object array for multi-file uploads. To return the first object for single-file uploads, set the second parameter to `true`.
 ```html
 <form method="POST" action="/upload" enctype="multipart/form-data">
   <input type="file" name="multi[]" multiple required>
   <input type="file" name="single" required>
-  <button type="submit">
+  <button type="submit">Submit</button>
 </form>
 ```
 ```php
 $app->post('/upload', function (Routy $app) {
   $multipleFiles = $app->getFiles('multi'); // object array
-  $singleFile = $app->getFiles('single'); // object
+  $singleFile = $app->getFiles('single', true); // object
 });
 ```
 
@@ -239,7 +230,7 @@ There are plenty of helper methods for handling responses.
 Use to return data as a JSON string
 ```php
 $app->sendJson(['prop' => 'value']); // { "prop": "value" }
-$app->sendJson([1, 2, {'three' => 4}, 5]); // [1, 2, { "three: 4 }, 5]
+$app->sendJson([1, 2, ['three' => 4], 5]); // [1, 2, { "three: 4 }, 5]
 ```
 
 ### `sendData()`

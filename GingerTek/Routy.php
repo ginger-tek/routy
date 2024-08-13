@@ -6,8 +6,6 @@
  * @license     MIT public license
  */
 
-namespace GingerTek\Routy;
-
 /**
  * Class Routy
  */
@@ -63,9 +61,9 @@ class Routy
   /**
    * Defines a route on which to match the incoming URI and HTTP method(s) against.
    *
-   * @param string   $method   Allowed methods, | delimited
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $method
+   * @param string $route
+   * @param callable $handlers
    */
   public function route(string $method, string $route, callable ...$handlers): void
   {
@@ -84,8 +82,8 @@ class Routy
   /**
    * Defines nested group of routes on which to match the incoming URI and HTTP method against.
    *
-   * @param string   $base     Base of the group route, i.e. /products
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $base
+   * @param callable $handlers
    * @return void
    */
   public function group(string $base, callable ...$handlers): void
@@ -102,8 +100,8 @@ class Routy
   /**
    * Defines an HTTP GET route on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function get(string $route, callable ...$handlers): void
@@ -114,8 +112,8 @@ class Routy
   /**
    * Defines an HTTP POST route on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function post(string $route, callable ...$handlers): void
@@ -126,8 +124,8 @@ class Routy
   /**
    * Defines an HTTP PUT route on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function put(string $route, callable ...$handlers): void
@@ -138,8 +136,8 @@ class Routy
   /**
    * Defines an HTTP PATCH route on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function patch(string $route, callable ...$handlers): void
@@ -150,8 +148,8 @@ class Routy
   /**
    * Defines an HTTP DELETE route on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function delete(string $route, callable ...$handlers): void
@@ -162,8 +160,8 @@ class Routy
   /**
    * Defines a route for any standard HTTP method on which to match the incoming URI against.
    *
-   * @param string   $route    A route pattern, i.e. /api/things
-   * @param callable $handlers The handling function(s) to be executed
+   * @param string $route
+   * @param callable $handlers
    * @return void
    */
   public function any(string $route, callable ...$handlers): void
@@ -205,24 +203,28 @@ class Routy
   /**
    * Returns uploaded file(s) by field name as an object array.
    * Returns null if not a multipart/form-data submission, field not found, or if field is empty.
+   * Second parameter returns the first file in the array for single file uploads.
    * 
-   * @return array|null
+   * @return array|object|null
    */
-  public function getFiles(string $name): array|null
+  public function getFiles(string $name, bool $single = false): array|object|null
   {
     $arr = $_FILES[$name] ?? false;
-    if (!$arr || !$arr['name'] || !$arr['name'][0]) return null;
-    if (!is_array(@$arr['name'])) return [(object)$arr];
+    if (!$arr || !$arr['name'] || !$arr['name'][0])
+      return null;
+    if (!is_array(@$arr['name']))
+      return [(object) $arr];
     $keys = array_keys($arr);
-    return array_map(fn ($i) => (object)array_combine($keys, array_map(fn ($k) => $arr[$k][$i], $keys)), range(0, count(end($arr)) - 1));
+    $files = array_map(fn($i) => (object) array_combine($keys, array_map(fn($k) => $arr[$k][$i], $keys)), range(0, count(end($arr)) - 1));
+    return $single ? array_shift($files) : $files;
   }
 
   /**
    * Sends an HTTP 301 (permanent) or 304 (temporary) redirect response to the specified URL location.
    * Immediately stops execution and returns to client.
    * 
-   * @param string $uri         The new location URI
-   * @param bool   $isPermanent If set, will perform a 301 (permanent) redirect
+   * @param string $uri
+   * @param bool   $isPermanent
    * @return void
    */
   public function redirect(string $uri, bool $isPermanent = false): void
@@ -237,13 +239,13 @@ class Routy
    * If the string data is a path to a file, the contents of the file will be sent and the content type will be the file's detected MIME type, unless specified explicitly by the second argument.
    * Immediately stops execution and returns to client.
    * 
-   * @param string $data      The string data to send
-   * @param bool   $permanent If set, will perform a 301 (permanent) redirect
+   * @param string $data
+   * @param bool   $permanent
    * @return void
    */
   public function sendData(string $data, string $contentType = null): void
   {
-    if (file_exists($data)) {
+    if (is_file($data)) {
       header('content-type: ' . ($contentType ?? mime_content_type($data)));
       echo file_get_contents($data);
     } else {
@@ -258,7 +260,7 @@ class Routy
    * Sends any data as a JSON string as the response.
    * Immediately stops execution and returns to client.
    * 
-   * @param int $code The HTTP response code to send
+   * @param int $code
    * @return void
    */
   public function sendJson(mixed $data): void
@@ -273,7 +275,7 @@ class Routy
    * - model  = Optional; Array of variables to expose to the template context
    * 
    * @param string $view
-   * @param array  $options
+   * @param array $options
    * @return void
    */
   public function render(string $view, array $options = []): void
@@ -294,7 +296,7 @@ class Routy
    * Sets the HTTP response code on the response.
    * Returns the current instance of Routy for method chaining
    * 
-   * @param int $code The HTTP response code to set
+   * @param int $code
    * @return Routy;
    */
   public function status(int $code): Routy
@@ -307,7 +309,7 @@ class Routy
    * Sends an HTTP response code as the response.
    * Immediately stops execution and returns to client.
    * 
-   * @param int $code The HTTP response code to send
+   * @param int $code
    * @return void
    */
   public function end(int $code = 200): void
@@ -320,6 +322,7 @@ class Routy
    * Shorthand for sending a custom HTTP 404 response based on current route.
    * Immediately stops execution and returns to client.
    * 
+   * @param callable $handler
    * @return void
    */
   public function notFound(callable $handler): void
@@ -331,111 +334,55 @@ class Routy
 
   /**
    * Serve static files at the base URI from a specified directory.
+   * Fallback to index.html if available, otherwise continues.
+   * Handles MIME types for most common web files; optionally providean associative array of extension to MIME types to extend the types.
+   * 
    * NOTE: This may not be as performant as serving files from your web server directly.
    * NOTE: Use at your discretion with consideration for the speed of your application.
    * NOTE: MIME types referenced from https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types.
    * 
+   * @param string $path
+   * @param array $mimeTypes
    * @return void
    */
-  public function serveStatic(string $path, bool $fallback = true): void
+  public function serveStatic(string $path, array $mimeTypes = []): void
   {
-    $path .= $this->uri;
-    if (file_exists($path)) {
-      if (is_dir($path))
-        $path .= 'index.html';
-      $mime = match (pathinfo($path, PATHINFO_EXTENSION)) {
-        'aw' => 'application/applixware',
-        'ecma' => 'application/ecmascript',
-        'exi' => 'application/exi',
-        'gxf' => 'application/gxf',
-        'stk' => 'application/hyperstudio',
-        'ipfix' => 'application/ipfix',
+    $file = $path . $this->uri;
+    if (is_file($file)) {
+      $ext = pathinfo($file, PATHINFO_EXTENSION);
+      $mime = match ($ext) {
         'json' => 'application/json',
-        'mrc' => 'application/marc',
-        'ma', 'nb', 'mb' => 'application/mathematica',
-        'mbox' => 'application/mbox',
-        'm21' => 'application/mp21',
-        'mp21' => 'application/mp21',
-        'mp4s' => 'application/mp4',
-        'doc', 'dot' => 'application/msword',
-        'mxf' => 'application/mxf',
-        'oda' => 'application/oda',
-        'ogx' => 'application/ogg',
-        'onetoc', 'onetoc2', 'onetmp', 'onepkg' => 'application/onenote',
-        'oxps' => 'application/oxps',
-        'pdf' => 'application/pdf',
-        'p10' => 'application/pkcs10',
-        'p8' => 'application/pkcs8',
-        'pki' => 'application/pkixcmp',
-        'ai', 'eps', 'ps' => 'application/postscript',
-        'rtf' => 'application/rtf',
-        'sdp' => 'application/sdp',
-        'gram' => 'application/srgs',
-        'wasm' => 'application/wasm',
-        'wgt' => 'application/widget',
-        'hlp' => 'application/winhlp',
-        'xml', 'xsl' => 'application/xml',
-        'yang' => 'application/yang',
+        'doc', 'docx' => 'application/msword',
+        'pdf', 'ai' => 'application/pdf',
+        'xml', 'xsl', 'xlsx' => 'application/xml',
         'zip' => 'application/zip',
-        'adp' => 'audio/adpcm',
-        'au', 'snd' => 'audio/basic',
-        'mid', 'midi', 'kar', 'rmi' => 'audio/midi',
         'm4a', 'mp4a' => 'audio/mp4',
-        'mpga', 'mp2', 'mp2a', 'mp3', 'm2a', 'm3a' => 'audio/mpeg',
-        'oga', 'ogg', 'spx', 'opus' => 'audio/ogg',
-        's3m' => 'audio/s3m',
-        'sil' => 'audio/silk',
+        'mp3' => 'audio/mpeg',
+        'oga', 'ogg', 'opus' => 'audio/ogg',
         'weba' => 'audio/webm',
-        'xm' => 'audio/xm',
-        'ttc' => 'font/collection',
         'otf' => 'font/otf',
         'ttf' => 'font/ttf',
         'woff' => 'font/woff',
         'woff2' => 'font/woff2',
         'bmp' => 'image/bmp',
-        'cgm' => 'image/cgm',
-        'g3' => 'image/g3fax',
         'gif' => 'image/gif',
-        'ief' => 'image/ief',
-        'jpeg', 'jpg', 'jpe' => 'image/jpeg',
-        'ktx' => 'image/ktx',
+        'jpeg', 'jpg' => 'image/jpeg',
         'png' => 'image/png',
-        'sgi' => 'image/sgi',
         'tiff', 'tif' => 'image/tiff',
         'webp' => 'image/webp',
-        'eml', 'mime' => 'message/rfc822',
-        'igs', 'iges' => 'model/iges',
-        'msh', 'mesh', 'silo' => 'model/mesh',
-        'wrl', 'vrml' => 'model/vrml',
         'ics', 'ifb' => 'text/calendar',
         'css' => 'text/css',
         'csv' => 'text/csv',
-        'html' => 'text/html',
-        'htm' => 'text/html',
-        'js', 'mjs' => 'text/javascript',
-        'n3' => 'text/n3',
-        'txt', 'text', 'conf', 'def', 'list', 'log', 'in' => 'text/plain',
+        'html', 'htm' => 'text/html',
+        'js' => 'text/javascript',
+        'txt', 'text', 'conf', 'log', 'ini' => 'text/plain',
         'rtx' => 'text/richtext',
-        'sgml', 'sgm' => 'text/sgml',
-        't', 'tr', 'roff', 'man', 'me', 'ms' => 'text/troff',
-        'ttl' => 'text/turtle',
-        'vcard' => 'text/vcard',
-        '3gp' => 'video/3gpp',
-        '3g2' => 'video/3gpp2',
-        'h261' => 'video/h261',
-        'h263' => 'video/h263',
-        'h264' => 'video/h264',
-        'jpgv' => 'video/jpeg',
-        'jpm', 'jpgm' => 'video/jpm',
-        'mj2', 'mjp2', 'ts', 'm2t', 'm2ts', 'mts' => 'video/mp2t',
-        'mp4', 'mp4v', 'mpg4', 'mpeg', 'mpg', 'mpe', 'm1v', 'm2v' => 'video/mpeg',
-        'ogv' => 'video/ogg',
-        'qt', 'mov' => 'video/quicktime',
+        'mp4', 'mp4v', 'mpg4', 'mpeg', 'ts' => 'video/mpeg',
         'webm' => 'video/webm',
+        default => $mimeTypes[$ext] ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $file)
       };
-      $this->sendData($path, $mime);
+      $this->sendData($file, $mime);
     }
-    if ($fallback)
-      $this->end(404);
+    $this->sendData("$path/index.html");
   }
 }

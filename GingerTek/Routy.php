@@ -6,7 +6,7 @@
  * @license     MIT public license
  */
 
- namespace GingerTek;
+namespace GingerTek;
 
 /**
  * Class Routy

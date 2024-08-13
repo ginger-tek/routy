@@ -151,24 +151,18 @@ $app->notFound(function (Routy $app) { ... });
 ```
 
 ## Serve Static Files (SPA)
-For convenience, you can serve static files from the base URI, such as for a SPA frontend, directly from the same app.
+To serve static files from the base URI for a SPA frontend directly from the same app, use the `serveStatic()` method ***after*** all the other route definitions.
 
-To do this, use the `serveStatic()` method **after** all the other route definitions
+This function is typically performed by your actual web server (Apache/nginx/caddy), so use with caution in production scenarios. Since this function enables your app to handle file serving, **your application must run as a router for files to be served properly, i.e. `php -S localhost:8000 router.php`**.
+
 ```php
 $app = new Routy();
 
-// all routes defined here
-
+$app->group('/api', ApiController::index(...));
 $app->serveStatic('public');
 ```
 
-If a file is not found, a generic HTTP 404 will be returned by default. You can override this if you want by setting the second parameter to `false`, and then either defining a custom or generic fallback right after it
-```php
-$app->serveStatic('public', false);
-
-$app->notFound(fn() =>$app->sendData('404.html'));
-// or
-$app->end(404);
+If the requested file isn't found, the path + `index.html` will be served instead. If there's no `index.html` file, the failing path will be returned.
 ```
 
 ## Request Properties

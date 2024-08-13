@@ -10,7 +10,7 @@ composer require ginger-tek/routy
 ```php
 require 'vendor/autoload.php';
 
-use GingerTek\Routy\Routy;
+use GingerTek\Routy;
 
 $app = new Routy();
 ```

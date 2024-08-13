@@ -2,6 +2,8 @@
 
 require '../../GingerTek/Routy.php';
 
+use GingerTek\Routy;
+
 $app = new Routy(['layout' => 'layout.php']);
 
 $app->get('/*', function (Routy $app) {

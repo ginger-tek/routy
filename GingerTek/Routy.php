@@ -283,6 +283,7 @@ class Routy
   public function render(string $view, array $options = []): void
   {
     $options['layout'] ??= $this->layout ?? null;
+    ob_start();
     if (@$options['layout']) {
       $options['view'] = $view;
       extract($options, EXTR_OVERWRITE);
@@ -291,6 +292,7 @@ class Routy
       extract($options, EXTR_OVERWRITE);
       include $view;
     }
+    ob_end_flush();
     exit;
   }
 

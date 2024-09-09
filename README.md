@@ -1,5 +1,7 @@
-# Routy
-A simple but robust PHP router for fast application and REST API development, with dynamic routing, nested routes, middleware support, and more!
+<div align=center>
+<h1>Routy</h1>
+<p>A simple, robust PHP router for fast app and API development</p>
+</div>
 
 # Getting Started
 ## Composer

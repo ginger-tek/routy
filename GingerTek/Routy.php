@@ -283,6 +283,7 @@ class Routy
   public function render(string $view, array $options = []): void
   {
     $options['layout'] ??= $this->layout ?? null;
+    $options['app'] = $this;
     ob_start();
     if (@$options['layout']) {
       $options['view'] = $view;

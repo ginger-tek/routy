@@ -275,7 +275,7 @@ $app = new Routy();
 $app->render('path/to/view.php');
 ```
 
-Finally, set the `model` option to pass in a data model to expose to the template context in your view files
+Finally, set the `model` option to pass in a data model to expose to the template context in your view files. The current app instance is also exposed to the template context automatically
 ```php
 $app->render('path/to/view.php', [
   'model' => [
@@ -284,7 +284,10 @@ $app->render('path/to/view.php', [
 ]);
 
 // view.php
-<div><?= $model->someProperty ?></div>
+<div><?= $model['someProperty'] ?></div>
+<?php if ($app->uri == '/some-route'): ?>
+  ...
+<?php endif ?>
 ```
 
 ### `status()`

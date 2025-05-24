@@ -238,7 +238,7 @@ class Routy
    * @param bool   $permanent
    * @return void
    */
-  public function sendData(string $data, ?string $contentType): void {
+  public function sendData(string $data, ?string $contentType = null): void {
     if (is_file($data)) {
       header('content-type: ' . ($contentType ?? mime_content_type($data)));
       echo file_get_contents($data);

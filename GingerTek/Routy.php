@@ -39,9 +39,14 @@ class Routy
   private array $path;
 
   /**
-   * @var string Internal string path to default layout template file to use for render() method.
+   * @var string Internal string path for default layout template file to use in render() method.
    */
   private ?string $layout;
+
+  /**
+   * @var string Internal string path for default views directory to use in render() method. Default directory is 'views' located in root of project.
+   */
+  private ?string $views;
 
   /**
    * Takes an optional argument array for configurations.
@@ -50,14 +55,14 @@ class Routy
    * 
    * @param array $config
    */
-  function __construct(array $config = [])
-  {
+  public function __construct(array $config = []) {
     $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = isset($config['base']) ? [$config['base']] : [];
     $this->query = (object) $_GET;
     $this->params = null;
     $this->layout = $config['layout'] ?? null;
+    $this->views = $config['views'] ?? 'views';
   }
 
   /**
@@ -67,8 +72,7 @@ class Routy
    * @param string $route
    * @param callable $handlers
    */
-  public function route(string $method, string $route, callable ...$handlers): void
-  {
+  public function route(string $method, string $route, callable ...$handlers): void {
     if (!str_contains($method, $this->method))
       return;
     $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
@@ -88,8 +92,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function group(string $base, callable ...$handlers): void
-  {
+  public function group(string $base, callable ...$handlers): void {
     if ($base != '/')
       $this->path[] = '/' . trim($base, '/');
     if (preg_match('#' . join($this->path) . '(?:\/|$)#', $this->uri)) {
@@ -106,8 +109,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function get(string $route, callable ...$handlers): void
-  {
+  public function get(string $route, callable ...$handlers): void {
     $this->route('GET', $route, ...$handlers);
   }
 
@@ -118,8 +120,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function post(string $route, callable ...$handlers): void
-  {
+  public function post(string $route, callable ...$handlers): void {
     $this->route('POST', $route, ...$handlers);
   }
 
@@ -130,8 +131,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function put(string $route, callable ...$handlers): void
-  {
+  public function put(string $route, callable ...$handlers): void {
     $this->route('PUT', $route, ...$handlers);
   }
 
@@ -142,8 +142,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function patch(string $route, callable ...$handlers): void
-  {
+  public function patch(string $route, callable ...$handlers): void {
     $this->route('PATCH', $route, ...$handlers);
   }
 
@@ -154,8 +153,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function delete(string $route, callable ...$handlers): void
-  {
+  public function delete(string $route, callable ...$handlers): void {
     $this->route('DELETE', $route, ...$handlers);
   }
 
@@ -166,8 +164,7 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function any(string $route, callable ...$handlers): void
-  {
+  public function any(string $route, callable ...$handlers): void {
     $this->route('GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS', $route, ...$handlers);
   }
 
@@ -177,8 +174,7 @@ class Routy
    * 
    * @return array
    */
-  public function getHeaders(): array
-  {
+  public function getHeaders(): array {
     $headers = getallheaders();
     return array_combine(array_map('strtolower', array_keys($headers)), array_values($headers));
   }
@@ -189,8 +185,7 @@ class Routy
    * 
    * @return mixed
    */
-  public function getBody(): mixed
-  {
+  public function getBody(): mixed {
     $body = file_get_contents('php://input');
     $headers = $this->getHeaders();
     if (substr($headers['content-type'], 0, 19) === 'multipart/form-data')
@@ -209,8 +204,7 @@ class Routy
    * 
    * @return array|object|null
    */
-  public function getFiles(string $name, bool $single = false): array|object|null
-  {
+  public function getFiles(string $name, bool $single = false): array|object|null {
     $arr = $_FILES[$name] ?? false;
     if (!$arr || !$arr['name'] || !$arr['name'][0])
       return null;
@@ -229,8 +223,7 @@ class Routy
    * @param bool   $isPermanent
    * @return void
    */
-  public function redirect(string $uri, bool $isPermanent = false): void
-  {
+  public function redirect(string $uri, bool $isPermanent = false): void {
     http_response_code($isPermanent ? 301 : 302);
     header("location: $uri");
     exit;
@@ -245,8 +238,7 @@ class Routy
    * @param bool   $permanent
    * @return void
    */
-  public function sendData(string $data, string $contentType = null): void
-  {
+  public function sendData(string $data, ?string $contentType): void {
     if (is_file($data)) {
       header('content-type: ' . ($contentType ?? mime_content_type($data)));
       echo file_get_contents($data);
@@ -265,13 +257,12 @@ class Routy
    * @param int $code
    * @return void
    */
-  public function sendJson(mixed $data): void
-  {
+  public function sendJson(mixed $data): void {
     $this->sendData(json_encode($data), 'application/json');
   }
 
   /**
-   * Renders a view using standard PHP templating via includes.
+   * Renders a view file from the views directory utilizing standard PHP templating includes/requires.
    * Options:
    * - layout = Optional; Overrides default layout. If set to false, will render without layout
    * - model  = Optional; Array of variables to expose to the template context
@@ -280,13 +271,12 @@ class Routy
    * @param array $options
    * @return void
    */
-  public function render(string $view, array $options = []): void
-  {
+  public function render(string $view, array $options = []): void {
     $options['layout'] ??= $this->layout ?? null;
     $options['app'] = $this;
     ob_start();
     if (@$options['layout']) {
-      $options['view'] = $view;
+      $options['view'] = "$this->views/" . basename($view, '.php') . '.php';
       extract($options, EXTR_OVERWRITE);
       include $options['layout'];
     } else {
@@ -304,8 +294,7 @@ class Routy
    * @param int $code
    * @return Routy;
    */
-  public function status(int $code): Routy
-  {
+  public function status(int $code): Routy {
     http_response_code($code);
     return $this;
   }
@@ -317,8 +306,7 @@ class Routy
    * @param int $code
    * @return void
    */
-  public function end(int $code = 200): void
-  {
+  public function end(int $code = 200): void {
     $this->status($code);
     exit;
   }
@@ -330,8 +318,7 @@ class Routy
    * @param callable $handler
    * @return void
    */
-  public function notFound(callable $handler): void
-  {
+  public function notFound(callable $handler): void {
     $this->status(404);
     $handler($this);
     exit;
@@ -350,8 +337,7 @@ class Routy
    * @param array $mimeTypes
    * @return void
    */
-  public function serveStatic(string $path, array $mimeTypes = []): void
-  {
+  public function serveStatic(string $path, array $mimeTypes = []): void {
     $file = $path . $this->uri;
     if (is_file($file)) {
       $ext = pathinfo($file, PATHINFO_EXTENSION);

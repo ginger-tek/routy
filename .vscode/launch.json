@@ -32,7 +32,7 @@
         "-dxdebug.start_with_request=yes",
         "-S",
         "localhost:8002",
-        "router.php"
+        "index.php"
       ],
       "program": "",
       "cwd": "${workspaceRoot}/tests/spa",

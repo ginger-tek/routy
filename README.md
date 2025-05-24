@@ -52,10 +52,12 @@ You can pass an associative array of optional configurations to the constructor.
 
 - `base` to set a global base URI when running from a sub-directory
 - `layout` to set a default layout template file to use in the `render()` reponse method
+- `views` to set a default views directory to use in the `render()` reponse method
 ```php
 $app = new Routy([
   'base' => '/api',
-  'layout' => 'path/to/layout.php'
+  'layout' => 'path/to/layout.php',
+  'views' => 'path/to/views/dir'
 ])
 ```
 
@@ -163,9 +165,7 @@ $app = new Routy();
 $app->group('/api', ApiController::index(...));
 $app->serveStatic('public');
 ```
-
 If the requested file isn't found, the path + `index.html` will be served instead. If there's no `index.html` file, the failing path will be returned.
-```
 
 ## Request Properties
 You can access the incoming HTTP method and URI via the `uri`, `method`, and `params`, and `query` properties on the `$app` instance.
@@ -244,35 +244,35 @@ $app->redirect('/new/permanent/location', true); // HTTP 301
 ```
 
 ### `render()`
-Use to render a PHP view file, using standard PHP includes and variable scope extraction for MCV modeling
+Use to render a PHP view file, using standard PHP includes and variable scope extraction for MVC modeling
 
-You can set a default layout via the constructor config to use
+You can set a default layout and/or views directory to use via the constructor config
 ```php
 $app = new Routy(['layout' => 'path/to/layout.php']);
 ...
-$app->render('views/home.php');
-$app->render('views/about.php')
+$app->render('home'); // views/home.php
+$app->render('about'); // views/about.php
 ```
 
 You can also override the default by settings the `layout` option to another path
 ```php
 $app = new Routy(['layout' => 'path/to/layout1.php']);
 ...
-$app->render('path/to/view.php', ['layout' => 'path/to/layout2.php']);
+$app->render('view', ['layout' => 'path/to/layout2.php']);
 ```
 
 Or you can use no layout by setting the `layout` option to `false`
 ```php
 $app = new Routy(['layout' => 'path/to/layout.php']);
 ...
-$app->render('path/to/view.php', ['layout' => false]);
+$app->render('view', ['layout' => false]);
 ```
 
 You may also not specify a layout at all, and just render files as is
 ```php
 $app = new Routy();
 ...
-$app->render('path/to/view.php');
+$app->render('view');
 ```
 
 Finally, set the `model` option to pass in a data model to expose to the template context in your view files. The current app instance is also exposed to the template context automatically

@@ -8,9 +8,9 @@ $app = new Routy;
 
 class Api
 {
-  static function index(Routy $app)
+  public static function index(Routy $app)
   {
-    $app->sendJson(['test' => 'data']);
+    $app->get('/', fn($app) => $app->sendJson(['test' => 'data']));
   }
 }
 

@@ -52,7 +52,7 @@ You can pass an associative array of optional configurations to the constructor.
 
 - `base` to set a global base URI when running from a sub-directory
 - `layout` to set a default layout template file to use in the `render()` reponse method
-- `views` to set a default views directory to use in the `render()` reponse method
+- `views` to set a default views directory to use in the `render()` reponse method; if not set, defaults to 'views' in the project root
 ```php
 $app = new Routy([
   'base' => '/api',

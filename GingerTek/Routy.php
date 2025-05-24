@@ -272,11 +272,12 @@ class Routy
    * @return void
    */
   public function render(string $view, array $options = []): void {
+    $view = "$this->views/" . basename($view, '.php') . '.php';
     $options['layout'] ??= $this->layout ?? null;
     $options['app'] = $this;
     ob_start();
     if (@$options['layout']) {
-      $options['view'] = "$this->views/" . basename($view, '.php') . '.php';
+      $options['view'] = $view;
       extract($options, EXTR_OVERWRITE);
       include $options['layout'];
     } else {

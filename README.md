@@ -123,15 +123,17 @@ $app->get('/products', authenticate(...), function (Routy $app) {
 ```
 
 ## Context Sharing
-To share data between handlers/middleware, use the `setCtx()` and `getCtx()` methods to set and get key/value pairs.
-Any data type can be passed in for the value.
+To share data between handlers/middleware or provide a global resource to the instance, use the `setCtx()` and `getCtx()`. Any data type can be passed in for the value.
 ```php
 $app->setCtx('db', new PDO('sqlite:myData.db'));
 ...
-$db = $app->getCtx('db');
-$stmt = $db->prepare('select 1');
-$stmt->execute();
-$result = $stmt->fetch();
+$app->get('/products', function (Routy $app) {
+  $db = $app->getCtx('db');
+  $stmt = $db->prepare('select * from products');
+  $stmt->execute();
+  $result = $stmt->fetch();
+  ...
+})
 ```
 
 ## Route Groups

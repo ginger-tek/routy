@@ -97,21 +97,41 @@ $app->get('/products/:id', function(Routy $app) {
 ```
 
 ## Middleware
-All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed.
+### Global Middleware
+If you want to define global middleware, you can use the `use()` method.
+Any middleware or route handler callable must have one argument to accept the current Routy instance.
 
-Use the native `$_REQUEST` and `$_SESSION` globals to share data between middleware/handlers.
+(See [Context Sharing](#context-sharing) about sharing data between middleware/handlers)
 ```php
 function authenticate(Routy $app) {
   if(!($token = @$app->getHeaders()['authorization']))
     $app->end(401);
-  $_REQUEST['user'] = parseToken($token);
+  $app->setCtx('user', parseToken($token));
 }
 
+$app->use(authenticate(...));
+```
+
+### Route Middleware
+All arguments set after the URI string argument are considered middleware functions, including the route handler, so you can define as many as needed.
+```php
 $app->get('/products', authenticate(...), function (Routy $app) {
-  $userId = $_REQUEST['user']->id;
+  $userId = $app->getCtx('user')->id;
   $items = getProductsByUser($userId);
   $app->sendJson($items);
 });
+```
+
+## Context Sharing
+To share data between handlers/middleware, use the `setCtx()` and `getCtx()` methods to set and get key/value pairs.
+Any data type can be passed in for the value.
+```php
+$app->setCtx('db', new PDO('sqlite:myData.db'));
+...
+$db = $app->getCtx('db');
+$stmt = $db->prepare('select 1');
+$stmt->execute();
+$result = $stmt->fetch();
 ```
 
 ## Route Groups

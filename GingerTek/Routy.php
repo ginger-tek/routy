@@ -34,6 +34,11 @@ class Routy
   public ?object $query;
 
   /**
+   * @var array General purpose array to use for passing around resources and references.
+   */
+  private array $ctx;
+
+  /**
    * @var array Internal array of URI parts for handling grouped/nested matching.
    */
   private array $path;
@@ -52,10 +57,11 @@ class Routy
    * Takes an optional argument array for configurations.
    * - base = set a global base URI when running from a sub-directory
    * - layout = set a default layout template file to use in render() method
+   * - views = set a default views directory to use in render() method
    * 
    * @param array $config
    */
-  public function __construct(array $config = []) {
+  public function __construct(?array $config = []) {
     $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = isset($config['base']) ? [$config['base']] : [];
@@ -83,6 +89,37 @@ class Routy
         $handler($this);
       }
     }
+  }
+
+  /**
+   * Set a context key/value set to use throughout the current Routy instance
+   * 
+   * @param string $key
+   * @param mixed $value
+   * @return void
+   */
+  public function setCtx(string $key, mixed $value): void {
+    $this->ctx[$key] = $value;
+  }
+
+  /**
+   * Retrieve a context value by key from the current Routy instance.
+   * 
+   * @param string $key
+   * @return bool|mixed
+   */
+  public function getCtx(string $key): mixed {
+    return $this->ctx[$key] ?? false;
+  }
+
+  /**
+   * Defines a middleware, which must be a function that accepts the current Routy class instance as its sole argument.
+   *
+   * @param callable $middleware
+   * @return void
+   */
+  public function use(callable $middleware): void {
+    $middleware($this);
   }
 
   /**
@@ -204,7 +241,7 @@ class Routy
    * 
    * @return array|object|null
    */
-  public function getFiles(string $name, bool $single = false): array|object|null {
+  public function getFiles(string $name, ?bool $single = false): array|object|null {
     $arr = $_FILES[$name] ?? false;
     if (!$arr || !$arr['name'] || !$arr['name'][0])
       return null;
@@ -223,7 +260,7 @@ class Routy
    * @param bool   $isPermanent
    * @return void
    */
-  public function redirect(string $uri, bool $isPermanent = false): void {
+  public function redirect(string $uri, ?bool $isPermanent = false): void {
     http_response_code($isPermanent ? 301 : 302);
     header("location: $uri");
     exit;
@@ -271,7 +308,7 @@ class Routy
    * @param array $options
    * @return void
    */
-  public function render(string $view, array $options = []): void {
+  public function render(string $view, ?array $options = []): void {
     $view = "$this->views/" . basename($view, '.php') . '.php';
     $options['layout'] ??= $this->layout ?? null;
     $options['app'] = $this;
@@ -307,7 +344,7 @@ class Routy
    * @param int $code
    * @return void
    */
-  public function end(int $code = 200): void {
+  public function end(?int $code = 200): void {
     $this->status($code);
     exit;
   }
@@ -338,7 +375,7 @@ class Routy
    * @param array $mimeTypes
    * @return void
    */
-  public function serveStatic(string $path, array $mimeTypes = []): void {
+  public function serveStatic(string $path, ?array $mimeTypes = []): void {
     $file = $path . $this->uri;
     if (is_file($file)) {
       $ext = pathinfo($file, PATHINFO_EXTENSION);

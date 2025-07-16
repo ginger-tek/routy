@@ -15,4 +15,4 @@ class Api
 }
 
 $app->group('/api', Api::index(...));
-$app->serveStatic('public');
+$app->serveStatic('/', 'public');

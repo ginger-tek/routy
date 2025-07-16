@@ -363,21 +363,25 @@ class Routy
   }
 
   /**
-   * Serve static files at the base URI from a specified directory.
-   * Fallback to index.html if available, otherwise continues.
-   * Handles MIME types for most common web files; optionally providean associative array of extension to MIME types to extend the types.
+   * Serve static files from a specified directory via a proxy route.
+   * Will fallback to a generic 404 for file URI and index.html if a directory URI.
+   * Use options associative array to extende the MIME types mapping or to adjust the caching limit.
+   * - maxAge (number of minutes to cache static files)
+   * - mimeTypes (assoc. array of file extensions to MIME types)
    * 
-   * NOTE: This may not be as performant as serving files from your web server directly.
-   * NOTE: Use at your discretion with consideration for the speed of your application.
+   * NOTE: This may not be as performant as serving files directly from your web server. Use with discretion in consideration of your application performance requirements.
    * NOTE: MIME types referenced from https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types.
    * 
    * @param string $path
-   * @param array $mimeTypes
+   * @param string $directory
+   * @param array $options
    * @return void
    */
-  public function serveStatic(string $path, ?array $mimeTypes = []): void {
-    $file = $path . $this->uri;
-    if (is_file($file)) {
+  public function serveStatic(string $route, string $directory, ?array $options = []): void {
+    $this->group($route, function($app) use ($route, $directory, $options) {
+      $file = join('/',[$directory, trim(str_replace(trim($route, '/'), '', $app->uri), '/')]);
+      if (is_dir($file) && file_exists("$directory/index.html")) $app->sendData("$directory/index.html");
+      else if (!is_file($file)) $app->end(404);
       $ext = pathinfo($file, PATHINFO_EXTENSION);
       $mime = match ($ext) {
         'json' => 'application/json',
@@ -408,10 +412,12 @@ class Routy
         'rtx' => 'text/richtext',
         'mp4', 'mp4v', 'mpg4', 'mpeg', 'ts' => 'video/mpeg',
         'webm' => 'video/webm',
-        default => $mimeTypes[$ext] ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $file)
+        default => $options['mimeTypes'][$ext] ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $file)
       };
+      header_remove('Expires');
+      header_remove('Pragma');
+      header('Cache-Control: max-age=' . (($options['maxAge'] ?? 60) * 1000));
       $this->sendData($file, $mime);
-    }
-    $this->sendData("$path/index.html");
+    });
   }
 }

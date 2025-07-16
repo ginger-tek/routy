@@ -14,13 +14,13 @@ require 'vendor/autoload.php';
 
 use GingerTek\Routy;
 
-$app = new Routy();
+$app = new Routy;
 ```
 
 ## Starter Example
 Handlers for each route can be any kind of callable, such as regular functions, arrow functions, closure variables, or static class methods.
 ```php
-$app = new Routy();
+$app = new Routy;
 
 // Standard Function
 $app->get('/things', function (Routy $app) {
@@ -139,7 +139,7 @@ $app->get('/products', function (Routy $app) {
 ## Route Groups
 You can define route groups using the `group()` method.
 ```php
-$app = new Routy();
+$app = new Routy;
 
 $app->group('/products', function (Routy $app) {
   $app->post('/', ...);
@@ -163,7 +163,7 @@ To set a fallback route, use the `notFound()` method to set a handler function t
 
 Fallback routes are scoped to wherever they are defined, and will only be reached if they match the incoming URI's parent path.
 ```php
-$app = new Routy();                        
+$app = new Routy;                        
 
 $app->group('/products', function (Routy $app) {
   $app->get('/', fn (Routy $app) => $app->sendJson([]));
@@ -177,17 +177,18 @@ $app->notFound(function (Routy $app) { ... });
 ```
 
 ## Serve Static Files (SPA)
-To serve static files from the base URI for a SPA frontend directly from the same app, use the `serveStatic()` method ***after*** all the other route definitions.
+To serve static files from a specified directory via a proxy route, use the `serveStatic()` method ***after*** all other normal route definitions.
+You can use this to serve asset files or a whole SPA directory. If the requested URI is a directory, an `index.html` file will be served, if one exists. Otherwise, if any requested file is not found, a generic 404 response with be sent back.
 
-This function is typically performed by your actual web server (Apache/nginx/caddy), so use with caution in production scenarios. Since this function enables your app to handle file serving, **your application must run as a router for files to be served properly, i.e. `php -S localhost:8000 router.php`**.
+**NOTE: Serving static files is typically best performed by a web server (Apache/nginx/Caddy) via rewrite rules. Consider your performance requirements in production scenarios when using this feature.**
 
 ```php
-$app = new Routy();
+$app = new Routy;
 
 $app->group('/api', ApiController::index(...));
-$app->serveStatic('public');
+$app->serveStatic('/nm', 'node_modules');
+$app->serveStatic('/', 'public');
 ```
-If the requested file isn't found, the path + `index.html` will be served instead. If there's no `index.html` file, the failing path will be returned.
 
 ## Request Properties
 You can access the incoming HTTP method and URI via the `uri`, `method`, and `params`, and `query` properties on the `$app` instance.

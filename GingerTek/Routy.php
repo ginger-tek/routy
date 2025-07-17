@@ -372,7 +372,7 @@ class Routy
    * NOTE: This may not be as performant as serving files directly from your web server. Use with discretion in consideration of your application performance requirements.
    * NOTE: MIME types referenced from https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types.
    * 
-   * @param string $path
+   * @param string $route
    * @param string $directory
    * @param array $options
    * @return void
@@ -380,9 +380,9 @@ class Routy
   public function serveStatic(string $route, string $directory, ?array $options = []): void {
     $this->group($route, function($app) use ($route, $directory, $options) {
       $file = join('/',[$directory, trim(str_replace(trim($route, '/'), '', $app->uri), '/')]);
-      if (is_dir($file) && file_exists("$directory/index.html")) $app->sendData("$directory/index.html");
-      else if (!is_file($file)) $app->end(404);
       $ext = pathinfo($file, PATHINFO_EXTENSION);
+      if (!$ext && is_file("$directory/index.html")) $app->sendData("$directory/index.html");
+      else if (!is_file($file)) $app->end(404);
       $mime = match ($ext) {
         'json' => 'application/json',
         'doc', 'docx' => 'application/msword',

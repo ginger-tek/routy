@@ -212,6 +212,15 @@ class Routy
    * @return array
    */
   public function getHeaders(): array {
+    if (!function_exists('getallheaders')) {
+      $headers = [];
+      foreach ($_SERVER as $key => $val) {
+        if (substr($key, 0, 5) == 'HTTP_')                                                      
+          $key = substr($key, 5);
+        $headers[strtolower(str_replace('_', '-', $key))] = $val;
+      }
+      return $headers;
+    }
     $headers = getallheaders();
     return array_combine(array_map('strtolower', array_keys($headers)), array_values($headers));
   }

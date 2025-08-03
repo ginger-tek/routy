@@ -15,7 +15,7 @@ class Api
     $app->group('/users', function (Routy $app) {
       $app->get('/', fn($app) => $app->sendJson(['users' => ['Alice', 'Bob']]));
       $app->get('/{id}', function (Routy $app, $id) {
-        return $app->sendJson(['user' => ['id' => $id, 'name' => 'User ' . $id]]);
+        $app->sendJson(['user' => ['id' => $id, 'name' => 'User ' . $id]]);
       });
     });
   }

@@ -132,7 +132,7 @@ class Routy
   public function group(string $base, callable ...$handlers): void {
     if ($base != '/')
       $this->path[] = '/' . trim($base, '/');
-    if (preg_match('#' . join($this->path) . '(?:\/|$)#', $this->uri)) {
+    if (preg_match('#^' . join($this->path) . '(?:\/|$)#', $this->uri)) {
       foreach ($handlers as $handler)
         $handler($this);
     }

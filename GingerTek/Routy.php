@@ -16,81 +16,60 @@ class Routy
   /**
    * @var string The URI of the incoming request.
    */
-  public string $uri;
+  public readonly string $uri;
 
   /**
    * @var string The HTTP method of the incoming request.
    */
-  public string $method;
+  public readonly string $method;
 
   /**
    * @var object Available route parameters parsed from the URI.
    */
-  public ?object $params;
-
-  /**
-   * @var object Available URL query parameters from the URL.
-   */
-  public ?object $query;
+  public readonly ?object $params;
 
   /**
    * @var array General purpose array to use for passing around resources and references.
    */
-  private array $ctx;
+  private array $ctx = [];
 
   /**
    * @var array Internal array of URI parts for handling grouped/nested matching.
    */
-  private array $path;
+  private array $path = [];
 
   /**
-   * @var string Internal string path for default layout template file to use in render() method.
+   * @var array Internal array for configuration settings.
    */
-  private ?string $layout;
+  private array $config;
 
   /**
-   * @var string Internal string path for default views directory to use in render() method. Default directory is 'views' located in root of project.
+   * @var array Map of file upload error codes to user-friendly messages.
    */
-  private ?string $views;
+  private readonly array $uploadErrMap;
 
   /**
    * Takes an optional argument array for configurations.
-   * - base = set a global base URI when running from a sub-directory
-   * - layout = set a default layout template file to use in render() method
-   * - views = set a default views directory to use in render() method
+   * - layout = Set a default layout template by name to use in toView() method
    * 
    * @param array $config
    */
   public function __construct(?array $config = []) {
-    $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
-    $this->path = isset($config['base']) ? [$config['base']] : [];
-    $this->query = (object) $_GET;
-    $this->params = null;
-    $this->layout = $config['layout'] ?? null;
-    $this->views = $config['views'] ?? 'views';
+    $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
+    $this->config = $config ?? [];
   }
 
   /**
-   * Defines a route on which to match the incoming URI and HTTP method(s) against.
-   *
-   * @param string $method
-   * @param string $route
-   * @param callable $handlers
+   * Override configuration settings.
+   * 
+   * @param string $key
+   * @param string $value
    */
-  public function route(string $method, string $route, callable ...$handlers): void {
-    if (!str_contains($method, $this->method))
-      return;
-    $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
-    if ($path === $this->uri || $path === '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-\+\%]+)', $path) . '$#', $this->uri, $params)) {
-      foreach ($handlers as $handler) {
-        if (isset($params))
-          $this->params = (object) $params;
-        $handler($this);
-      }
-    }
+  public function setConfig(string $key, string $value): void {
+    $this->config[$key] = $value;
   }
-
+  
   /**
    * Set a context key/value set to use throughout the current Routy instance
    * 
@@ -110,6 +89,29 @@ class Routy
    */
   public function getCtx(string $key): mixed {
     return $this->ctx[$key] ?? false;
+  }
+
+  /**
+   * Defines a route on which to match the incoming URI and HTTP method(s) against.
+   * If matched, handlers are executed in the order they appear, output is buffered, and execution is stopped immediately, returning output to the client.
+   *
+   * @param string $method
+   * @param string $route
+   * @param callable $handlers
+   */
+  public function route(string $method, string $route, callable ...$handlers): void {
+    if (!str_contains($method, $this->method))
+      return;
+    $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
+    if ($path === $this->uri || $path === '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-\+\%\&\;]+)', $path) . '$#', $this->uri, $params)) {
+      if (isset($params))
+        $this->params = (object) array_map(fn($value) => urldecode($value), $params);
+      ob_start();
+      foreach ($handlers as $handler)
+        if ($res = $handler($this))
+          echo $res;
+      exit(ob_get_clean() ?? '');
+    }
   }
 
   /**
@@ -206,137 +208,120 @@ class Routy
   }
 
   /**
-   * Returns an associative array of HTTP headers on the incoming request.
-   * All keys are lower-cased to standardize referencing.
+   * Returns the value of a specific HTTP header on the incoming request.
+   * Key lookup is case-insensitive.
    * 
    * @return array
    */
-  public function getHeaders(): array {
-    if (!function_exists('getallheaders')) {
-      $headers = [];
-      foreach ($_SERVER as $key => $val) {
-        if (substr($key, 0, 5) == 'HTTP_')                                                      
-          $key = substr($key, 5);
-        $headers[strtolower(str_replace('_', '-', $key))] = $val;
-      }
-      return $headers;
-    }
-    $headers = getallheaders();
-    return array_combine(array_map('strtolower', array_keys($headers)), array_values($headers));
+  public function getHeader(string $key): string {
+    $key = strtoupper(str_replace('-', '_', $key));
+    return $_SERVER[$key] ?? $_SERVER["HTTP_$key"] ?? '';
   }
 
   /**
    * Returns the body of the incoming request.
    * The return type is determined by the Content-Type header, otherwise the raw data is returned.
    * 
-   * @return mixed
+   * @return object|array|string
    */
-  public function getBody(): mixed {
-    $body = file_get_contents('php://input');
-    $headers = $this->getHeaders();
-    if (substr($headers['content-type'], 0, 19) === 'multipart/form-data')
+  public function getBody(): object|array|string {
+    $contentType = $this->getHeader('content-type');
+    if (isset($_POST) && (str_contains($contentType, 'multipart/form-data') || str_contains($contentType, 'application/x-www-form-urlencoded')))
       return (object) $_POST;
-    return match ($headers['content-type']) {
-      'application/json' => json_decode($body),
-      'application/x-www-form-urlencoded' => (object) $_POST,
-      default => $body
-    };
+    $body = file_get_contents('php://input');
+    if (str_contains($contentType, 'application/json'))
+      return json_decode($body);
+    return $body;
   }
 
   /**
    * Returns uploaded file(s) by field name as an object array.
-   * Returns null if not a multipart/form-data submission, field not found, or if field is empty.
+   * Returns null if not a multipart/form-data submission or if field is not found/empty.
    * Second parameter returns the first file in the array for single file uploads.
    * 
-   * @return array|object|null
+   * @return array|null
    */
-  public function getFiles(string $name, ?bool $single = false): array|object|null {
-    $arr = $_FILES[$name] ?? false;
-    if (!$arr || !$arr['name'] || !$arr['name'][0])
+  public function getFiles(string $field): array|null {
+    $arr = $_FILES[$field] ?? false;
+    if (!$arr || !isset($arr['name']) || !$arr['name'][0])
       return null;
-    if (!is_array(@$arr['name']))
-      return [(object) $arr];
-    $keys = array_keys($arr);
-    $files = array_map(fn($i) => (object) array_combine($keys, array_map(fn($k) => $arr[$k][$i], $keys)), range(0, count(end($arr)) - 1));
-    return $single ? array_shift($files) : $files;
+    $result = [];
+    $count = count($arr['name']);
+    $this->uploadErrMap ??= array_flip(array_filter(
+      get_defined_constants(), 
+      fn($k, $v) => str_starts_with($v, 'UPLOAD_ERR_'),
+      ARRAY_FILTER_USE_BOTH
+    ));
+    for ($i = 0; $i < $count; $i++)
+      $result[] = (object) [
+        'name' => $arr['name'][$i],
+        'type' => $arr['type'][$i],
+        'tmp_name' => $arr['tmp_name'][$i],
+        'error' => $arr['error'][$i] > 0 ? $this->uploadErrMap[$arr['error'][$i]] ?? 'UPLOAD_ERR_UNKNOWN' : false,
+        'size' => $arr['size'][$i]
+      ];
+    return $result;
   }
 
   /**
-   * Sends an HTTP 301 (permanent) or 304 (temporary) redirect response to the specified URL location.
+   * Sends contents of a file as the response as a buffered output. The content type on the response can be overridden via the optional second argument.
    * Immediately stops execution and returns to client.
    * 
-   * @param string $uri
-   * @param bool   $isPermanent
+   * @param string $path
+   * @param ?string $contentType
    * @return void
    */
-  public function redirect(string $uri, ?bool $isPermanent = false): void {
-    http_response_code($isPermanent ? 301 : 302);
-    header("location: $uri");
-    exit;
+  public function sendFile(string $path, ?string $contentType = null): void {
+    if (!is_file($path))
+      $this->end(404);
+    header('Content-Type: ' . ($contentType ?? mime_content_type($path)));
+    header('Content-Length: ' . filesize($path));
+    ob_clean();
+    flush();
+    readfile($path);
+    exit();
   }
 
   /**
-   * Sends string data as the response. The content type on the response can be overridden via the optional second argument.
-   * If the string data is a path to a file, the contents of the file will be sent and the content type will be the file's detected MIME type, unless specified explicitly by the second argument.
-   * Immediately stops execution and returns to client.
+   * Converts any data into a JSON string.
    * 
-   * @param string $data
-   * @param bool   $permanent
-   * @return void
+   * @param mixed $data
+   * @return string
    */
-  public function sendData(string $data, ?string $contentType = null): void {
-    if (is_file($data)) {
-      header('content-type: ' . ($contentType ?? mime_content_type($data)));
-      echo file_get_contents($data);
-    } else {
-      if ($contentType)
-        header("content-type: $contentType");
-      echo $data;
-    }
-    exit;
+  public function toJson(mixed $data): string {
+    header('Content-Type: application/json');
+    return json_encode($data);
   }
 
   /**
-   * Sends any data as a JSON string as the response.
-   * Immediately stops execution and returns to client.
-   * 
-   * @param int $code
-   * @return void
-   */
-  public function sendJson(mixed $data): void {
-    $this->sendData(json_encode($data), 'application/json');
-  }
-
-  /**
-   * Renders a view file from the views directory utilizing standard PHP templating includes/requires.
+   * Renders a view file from the views directory utilizing standard PHP templating and returns the output as a string.
    * Options:
    * - layout = Optional; Overrides default layout. If set to false, will render without layout
    * - model  = Optional; Array of variables to expose to the template context
    * 
    * @param string $view
-   * @param array $options
-   * @return void
+   * @param ?array $options
+   * @return string
    */
-  public function render(string $view, ?array $options = []): void {
-    $view = "$this->views/" . basename($view, '.php') . '.php';
-    $options['layout'] ??= $this->layout ?? null;
+  public function toView(string $view, ?array $options = []): string {
+    $view = "views/" . basename($view, '.php') . '.php';
+    $layout = $this->config['layout'] ?? $options['layout'] ?? false;
     $options['app'] = $this;
     ob_start();
-    if (@$options['layout']) {
+    if ($layout) {
       $options['view'] = $view;
       extract($options, EXTR_OVERWRITE);
-      include $options['layout'];
+      include $layout;
     } else {
       extract($options, EXTR_OVERWRITE);
       include $view;
     }
-    ob_end_flush();
-    exit;
+    return ob_get_clean();
   }
 
   /**
    * Sets the HTTP response code on the response.
-   * Returns the current instance of Routy for method chaining
+   * Returns the current instance of Routy for method chaining.
    * 
    * @param int $code
    * @return Routy;
@@ -344,6 +329,20 @@ class Routy
   public function status(int $code): Routy {
     http_response_code($code);
     return $this;
+  }
+  
+  /**
+   * Sends an HTTP 301 (permanent) or 304 (temporary) redirect response to the specified URL location.
+   * Immediately stops execution and returns to client.
+   * 
+   * @param string $uri
+   * @param bool $isPermanent
+   * @return void
+   */
+  public function redirect(string $uri, ?bool $isPermanent = false): void {
+    http_response_code($isPermanent ? 301 : 302);
+    header("Location: $uri");
+    exit();
   }
 
   /**
@@ -355,7 +354,7 @@ class Routy
    */
   public function end(?int $code = 200): void {
     $this->status($code);
-    exit;
+    exit();
   }
 
   /**
@@ -365,10 +364,9 @@ class Routy
    * @param callable $handler
    * @return void
    */
-  public function notFound(callable $handler): void {
+  public function fallback(callable $handler): void {
     $this->status(404);
-    $handler($this);
-    exit;
+    exit($handler($this));
   }
 
   /**
@@ -387,11 +385,13 @@ class Routy
    * @return void
    */
   public function serveStatic(string $route, string $directory, ?array $options = []): void {
-    $this->group($route, function($app) use ($route, $directory, $options) {
-      $file = join('/',[$directory, trim(str_replace(trim($route, '/'), '', $app->uri), '/')]);
+    $this->group($route, function (Routy $app) use ($route, $directory, $options) {
+      $file = join('/', [$directory, trim(str_replace(trim($route, '/'), '', $app->uri), '/')]);
       $ext = pathinfo($file, PATHINFO_EXTENSION);
-      if (!$ext && is_file("$directory/index.html")) $app->sendData("$directory/index.html");
-      else if (!is_file($file)) $app->end(404);
+      if (!$ext && is_file("$directory/index.html"))
+        return $app->sendFile("$directory/index.html");
+      else if (!is_file($file))
+        return $app->end(404);
       $mime = match ($ext) {
         'json' => 'application/json',
         'doc', 'docx' => 'application/msword',
@@ -418,7 +418,7 @@ class Routy
         'html', 'htm' => 'text/html',
         'js' => 'text/javascript',
         'txt', 'text', 'conf', 'log', 'ini' => 'text/plain',
-        'rtx' => 'text/richtext',
+        'rtf' => 'text/richtext',
         'mp4', 'mp4v', 'mpg4', 'mpeg', 'ts' => 'video/mpeg',
         'webm' => 'video/webm',
         default => $options['mimeTypes'][$ext] ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $file)
@@ -426,7 +426,7 @@ class Routy
       header_remove('Expires');
       header_remove('Pragma');
       header('Cache-Control: max-age=' . (($options['maxAge'] ?? 60) * 1000));
-      $this->sendData($file, $mime);
+      return $this->sendFile($file, $mime);
     });
   }
 }

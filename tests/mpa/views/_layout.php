@@ -3,5 +3,6 @@
   <li><a href="/form">POST Form</a></li>
   <li><a href="/form-multipart">POST Form (multipart)</a></li>
   <li><a href="/ajax">AJAX Form</a></li>
+  <li><a href="/raw-data">Raw Data</a></li>
 </ul>
 <?php include $view ?>

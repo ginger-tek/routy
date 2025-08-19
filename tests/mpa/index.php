@@ -11,9 +11,9 @@ $app->setCtx('db', new PDO('sqlite:test.db', null, null, [
   PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ
 ]));
 
-$app->get('/', fn($app) => $app->render('home'));
+$app->get('/', fn() => $app->render('home'));
 
-$app->get('/ajax', fn($app) => $app->render('ajax'));
+$app->get('/ajax', fn() => $app->render('ajax'));
 
 $app->group('/api', function (Routy $app) {
   $app->get('/ajax', function (Routy $app) {
@@ -23,21 +23,21 @@ $app->group('/api', function (Routy $app) {
     $app->sendJson(['msg' => $stmt->fetch()->text]);
   });
 
-  $app->status(404)->sendJson(['error' => 'API not found']);
+  $app->fallback(fn() => $app->sendJson(['error' => 'API not found']));
 });
 
 $app->route('GET|POST', '/form', function (Routy $app) {
   if ($app->method == 'POST')
-    $data = $_POST['test'];
-  $app->render('form', ['model' => ['data' => $data ?? null]]);
+    $data = $app->getBody();
+  $app->render('form', ['model' => ['data' => $data->test ?? null]]);
 });
 
 $app->route('GET|POST', '/form-multipart', function (Routy $app) {
   if ($app->method == 'POST') {
-    $data = $_POST['test'];
+    $data = $app->getBody();
     $files = $app->getFiles('files');
   }
-  $app->render('multipart', ['model' => ['data' => $data ?? null, 'files' => $files ?? []]]);
+  $app->render('multipart', ['model' => ['data' => $data->test ?? null, 'files' => $files ?? []]]);
 });
 
-$app->status(404)->sendData('<h1>Page not found</h4>');
+$app->fallback(fn() => $app->sendData('<h1>Page not found</h1>'));

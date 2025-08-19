@@ -6,20 +6,16 @@ use GingerTek\Routy;
 
 $app = new Routy;
 
-class Api
-{
-  public static function index(Routy $app)
-  {
-    $app->get('/', fn($app) => $app->sendJson(['test' => 'data']));
+$app->group('/api', function (Routy $app)  {
+  $app->get('/', fn() => $app->sendJson(['test' => 'data']));
 
-    $app->group('/users', function (Routy $app) {
-      $app->get('/', fn($app) => $app->sendJson(['users' => ['Alice', 'Bob']]));
-      $app->get('/{id}', function (Routy $app, $id) {
-        $app->sendJson(['user' => ['id' => $id, 'name' => 'User ' . $id]]);
-      });
+  $app->group('/users', function (Routy $app) {
+    $app->get('/', fn() => $app->sendJson(['users' => ['Alice', 'Bob']]));
+    $app->get('/:id', function (Routy $app) {
+      $app->sendJson(['user' => ['id' => $app->params->id, 'name' => 'User ' . $app->params->id]]);
     });
-  }
-}
-
-$app->group('/api', Api::index(...));
+  });
+  
+  $app->fallback(fn() => $app->sendJson(['error' => 'Route not found']));
+});
 $app->serveStatic('/', 'public');

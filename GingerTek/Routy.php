@@ -206,6 +206,16 @@ class Routy
   }
 
   /**
+   * Returns the URL-decoded value of a specific query parameter on the incoming request.
+   * Key lookup is case-sensitive.
+   * 
+   * @return string|null
+   */
+  public function getQuery(string $key): string|null {
+    return isset($_GET[$key]) ? urldecode($_GET[$key]) : null;
+  }
+
+  /**
    * Returns the body of the incoming request.
    * The return type is determined by the Content-Type header, otherwise the raw body is returned as is.
    * 

@@ -1,5 +1,5 @@
 <div align="center">
-<h1 style="border-bottom:none">Routy</h1>
+<h1>Routy</h1>
 <p>A simple, robust PHP router for fast app and API development</p>
 </div>
 

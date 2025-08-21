@@ -199,7 +199,7 @@ $app->get('/', function (Routy $app) {
 ```
 
 ## Request Helper Methods
-There are few helper methods for handling incoming request payloads.
+There are a few helper methods for handling incoming request payloads.
 
 ### `getQuery()`
 Use to retrieve the incoming URL query parameters. Key lookup is case-sensitive, and values are auto-URL-decoded.

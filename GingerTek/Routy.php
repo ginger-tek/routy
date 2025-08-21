@@ -280,7 +280,10 @@ class Routy
    * @return void
    */
   public function sendData(string $data, ?string $contentType = null): void {
-    header('content-type: ' . ($contentType ?? mime_content_type($data)));
+    if (is_file($data))
+      header('content-type: ' . ($contentType ?? mime_content_type($data)));
+    elseif($contentType)
+      header("content-type: $contentType");
     exit(is_file($data) ? file_get_contents($data) : $data);
   }
 

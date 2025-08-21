@@ -247,10 +247,18 @@ $app->post('/upload', function (Routy $app) {
 There are plenty of helper methods for handling responses.
 
 ### `sendData()`
-Use to return string data or a file's raw contents
+Use to return string data or a file's raw contents.
 ```php
 $app->sendData('<h1>Raw HTML</h1>');
+```
+If the data is a file path, the Content-Type will be automatically detected, if it has a known MIME type.
+```php
 $app->sendData('path/to/file.html');
+```
+Otherwise, the Content-Type can be specified explicitly.
+```php
+$app->sendData($base64EncodedImage, 'image/png');
+$app->sendData($pathToFileWithNoExtension, 'text/csv');
 ```
 
 ### `sendJson()`

@@ -283,9 +283,9 @@ $app->sendJson([1, 2, ['three' => 4], 5]); // [1, 2, { "three: 4 }, 5]
 ### `render()`
 Use to render a PHP view file, using standard PHP includes and variable scope extraction for MVC modeling.
 
-You can set a default layout to use via the constructor config. View files are expected to be normal .php template files and be stored in a `views/` directory at the app root.
+You can set a default layout to use via the constructor config. Layout and view files are expected to be `.php` files and be stored in a `layouts/` and `views/` directory, respectively, at the app root (See [Configurations](#configurations)).
 ```php
-$app = new Routy(['layout' => 'layouts/default.php']);
+$app = new Routy(['layout' => 'default']); // layouts/default.php
 ...
 $app->render('home'); // views/home.php
 $app->render('about'); // views/about.php
@@ -293,14 +293,14 @@ $app->render('about'); // views/about.php
 
 You can also override the default by settings the `layout` option to another path per call.
 ```php
-$app = new Routy(['layout' => 'path/to/layout1.php']);
+$app = new Routy(['layout' => 'default']);
 ...
-$app->render('view', ['layout' => 'path/to/layout2.php']);
+$app->render('view', ['layout' => 'alt-layout']);
 ```
 
 Or you can render with no layout by setting the `layout` option to `false`, which will render just the view by itself.
 ```php
-$app = new Routy(['layout' => 'path/to/layout.php']);
+$app = new Routy(['layout' => 'default']);
 ...
 $app->render('view', ['layout' => false]);
 ```
@@ -314,7 +314,7 @@ $app->render('view');
 
 To pass a model context into the view, set the `model` option to expose it to the layouyt and/or view template. The current app instance is also exposed to the template context automatically.
 ```php
-$app->render('path/to/view.php', [
+$app->render('some-view', [
   'model' => [
     'someProperty' => 'some data'
   ]

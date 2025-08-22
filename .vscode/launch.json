@@ -12,7 +12,9 @@
         "-dxdebug.mode=debug",
         "-dxdebug.start_with_request=yes",
         "-S",
-        "localhost:8001"
+        "localhost:8001",
+        "-t",
+        "public"
       ],
       "program": "",
       "cwd": "${workspaceRoot}/tests/mpa",

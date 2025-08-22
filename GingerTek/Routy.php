@@ -45,18 +45,32 @@ class Routy
 
   /**
    * Takes an optional argument array for configurations.
+   * - root = set the root app directory when running from a sub-directory
+   * - layout = set a default layout template to use in render() method
    * - base = set a global base URI when running from a sub-directory
-   * - layout = set a default layout template file to use in render() method
-   * - views = set a default views directory to use in render() method
    * 
    * @param array $config
    */
   public function __construct(?array $config = []) {
-    $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'])['path'], '/') ?: '/';
+    $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = isset($config['base']) ? [$config['base']] : [];
     $this->params = null;
-    $this->config = $config;
+    $this->config = [
+      'root' => $config['root'] ?? '',
+      'layout' => $config['layout'] ?? false,
+      'base' => $config['base'] ?? ''
+    ];
+  }
+
+  /**
+   * Get a configuration value by key.
+   *
+   * @param string $key
+   * @return string|null
+   */
+  public function getConfig(string $key): ?string {
+    return $this->config[$key] ?? null;
   }
 
   /**
@@ -311,14 +325,14 @@ class Routy
    * @return void
    */
   public function render(string $view, ?array $options = []): void {
-    $view = 'views/' . basename($view, '.php') . '.php';
+    $view = $this->config['root'] . "views/$view.php";
     $layout = $options['layout'] ?? $this->config['layout'] ?? false;
     $options['app'] = $this;
     ob_start();
     if ($layout) {
       $options['view'] = $view;
       extract($options, EXTR_OVERWRITE);
-      include $layout;
+      include $this->config['root'] . "layouts/$layout.php";
     } else {
       extract($options, EXTR_OVERWRITE);
       include $view;

@@ -23,7 +23,7 @@ Handlers for each route can be any kind of callable, such as regular functions, 
 $app = new Routy;
 
 // Standard Function
-$app->get('/things', function (Routy $app) {
+$app->get('/', function (Routy $app) {
   $app->sendData('Hello!');
 });
 
@@ -38,8 +38,9 @@ $app->get('/closure', $handler);
 
 // Static Class Method
 class ProductsController {
-  static function list(Routy $app) {
-    $app->sendData('Hello!');
+  public static function list(Routy $app) {
+    ...
+    $app->sendJson($products);
   }
 }
 
@@ -49,13 +50,24 @@ $app->get('/products', \ProductsController::list(...));
 # Configurations
 You can pass an associative array of optional configurations to the constructor.
 
+- `root` to set the root app directory when running from a sub-directory, i.e. public/. Defaults to current directory.
+- `layout` to set a default layout template file to use in the [`render()`](#render) reponse method. Defaults to no layout.
 - `base` to set a global base URI when running from a sub-directory
-- `layout` to set a default layout template file to use in the [`render()`](#render) reponse method
 ```php
 $app = new Routy([
+  'root' => '../',
+  // i.e. app istance is in public/index.php and your app root is one directory above
+
+  'layout' => 'default',
+  // this will use the layout file at "layouts/default.php", respective of app root if set
+
   'base' => '/api',
-  'layout' => 'layouts/default.php',
+  // i.e. your app files are in /wwwroot/my-api-app and is accessed via https://domain.com/api
 ])
+```
+If you need to use any of these configuration values later on, you can access them using `getConfig()`; however, you can not update configurations after instantiation.
+```php
+new \PDO('sqlite:' . $app->getConfig('root') . '/app.db');
 ```
 
 # Features

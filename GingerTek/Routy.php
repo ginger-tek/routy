@@ -24,9 +24,9 @@ class Routy
   public readonly string $method;
 
   /**
-   * @var object Available route parameters parsed from the URI.
+   * @var object Internal route parameters parsed from the URI.
    */
-  public ?object $params;
+  private array $params;
 
   /**
    * @var array General purpose array to use for passing around resources and references.
@@ -55,7 +55,7 @@ class Routy
     $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = isset($config['base']) ? [$config['base']] : [];
-    $this->params = null;
+    $this->params = [];
     $this->config = [
       'root' => $config['root'] ?? '',
       'layout' => $config['layout'] ?? false,
@@ -108,7 +108,7 @@ class Routy
     $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
     if ($path === $this->uri || $path === '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-\+\%\;\&]+)', $path) . '$#', $this->uri, $params)) {
       if (isset($params))
-        $this->params = (object) array_map(fn($v) => urldecode($v), $params);
+        $this->params = array_map(fn($v) => urldecode($v), $params);
       foreach ($handlers as $handler)
         $handler($this);
       exit();
@@ -220,13 +220,23 @@ class Routy
   }
 
   /**
-   * Returns the URL-decoded value of a specific query parameter on the incoming request.
+   * Returns the value of a specific query parameter on the incoming request. Returns false if not found.
+   * Key lookup is case-sensitive.
+   * 
+   * @return string|array|bool
+   */
+  public function getQuery(string $key): string|array|bool {
+    return $_GET[$key] ?? false;
+  }
+
+  /**
+   * Returns the value of a specific request parameter on the incoming request. Returns false if not found.
    * Key lookup is case-sensitive.
    * 
    * @return string|null
    */
-  public function getQuery(string $key): string|null {
-    return isset($_GET[$key]) ? urldecode($_GET[$key]) : null;
+  public function getParam(string $key): ?string {
+    return $this->params[$key] ?? false;
   }
 
   /**

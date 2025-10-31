@@ -97,10 +97,10 @@ $app->route('GET|POST|PUT', '/products', ...); // HTTP GET, POST and PUT for the
 ```
 
 ## Dynamic Routes
-To define dynamic route parameters, use the `:param` syntax and access them via the `params` object on the `$app` context. The values are URL-decoded automatically.
+To define dynamic route parameters, use the `:param` syntax and access them via the `getParam()` method on the `$app` context. The values are URL-decoded automatically.
 ```php
 $app->get('/products/:id', function(Routy $app) {
-  $id = $app->params->id;
+  $id = $app->getParam('id');
   // ...
 });
 ```
@@ -201,23 +201,27 @@ $app->serveStatic('/', 'public');
 ```
 
 ## Request Properties
-You can access the incoming URI, HTTP method, and URL params via the `uri`, `method`, and `params` properties on the `$app` instance.
+You can access the incoming request via the `uri` and `method` properties on the `$app` instance.
 ```php
-$app->get('/', function (Routy $app) {
-  $app->uri;                // /some/route
-  $app->method;             // GET, POST, PUT, etc.
-  $app->params->someParam;  // <= /route/with/:someParam
-});
+$app->uri;     // /some/route
+$app->method;  // GET, POST, PUT, etc.
 ```
 
 ## Request Helper Methods
-There are a few helper methods for handling incoming request payloads.
+There are a few helper methods for handling incoming requests.
 
 ### `getQuery()`
-Use to retrieve the incoming URL query parameters. Key lookup is case-sensitive, and values are auto-URL-decoded.
+Use to retrieve an incoming URL query parameter. Key lookup is case-sensitive. Returns false if not found.
 ```php
 $name = $app->getQuery('name'); // <= /some/route?name=John%20Doe
 echo $name; // John Doe
+```
+
+### `getParam()`
+Use to retrieve an incoming URI request parameter. Key lookup is case-sensitive. Returns false if not found.
+```php
+$param = $app->getParam('param'); // <= /some/route/:param
+echo $param; // 
 ```
 
 ### `getBody()`
@@ -232,7 +236,7 @@ $app->get('/products', function (Routy $app) {
 ```
 
 ### `getHeader()`
-Use to retrieve an incoming HTTP header by name. Lookup is case-insensitive, so both `Content-Type` and `content-type` will work.
+Use to retrieve an incoming HTTP header by name. Lookup is case-insensitive, i.e. both `Content-Type` and `content-type` will work.
 ```php
 $app->get('/products', function (Routy $app) {
   $authToken = $app->getHeader('authorization'); // 'Bearer eyhdgs9d8fg9s7d87f...'

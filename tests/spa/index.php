@@ -11,7 +11,7 @@ $app->group('/api', function (Routy $app)  {
 
   $app->group('/users', function (Routy $app) {
     $app->get('/', fn() => $app->sendJson(['users' => ['Alice', 'Bob']]));
-    $app->get('/:id', fn () => $app->sendJson(['user' => ['id' => $app->params->id, 'name' => 'User ' . $app->params->id]]));
+    $app->get('/:id', fn () => $app->sendJson(['user' => ['id' => $app->getParam('id'), 'name' => 'User ' . $app->getParam('id')]]));
     $app->fallback(fn() => $app->sendJson(['error' => 'Users route not found']));
   });
   

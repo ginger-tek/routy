@@ -327,8 +327,9 @@ class Routy
    * Immediately stops execution and returns response.
    * 
    * Options:
-   * - layout = Optional; Overrides default layout. If set to false, will render without layout
-   * - model  = Optional; Array of variables to expose to the template context
+   * - layout = Overrides default layout. If set to false, will render without layout
+   * - title  = Page title to use in layout via `$title`
+   * - model  = Array of variables to expose to the template context
    * 
    * @param string $view
    * @param array $options

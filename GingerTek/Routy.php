@@ -233,7 +233,7 @@ class Routy
    * Returns the value of a specific request parameter on the incoming request. Returns false if not found.
    * Key lookup is case-sensitive.
    * 
-   * @return string|null
+   * @return string|bool
    */
   public function getParam(string $key): ?string {
     return $this->params[$key] ?? false;

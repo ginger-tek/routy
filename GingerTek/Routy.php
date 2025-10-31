@@ -88,7 +88,7 @@ class Routy
    * Retrieve a context value by key from the current Routy instance.
    * 
    * @param string $key
-   * @return bool|mixed
+   * @return mixed
    */
   public function getCtx(string $key): mixed {
     return $this->ctx[$key] ?? false;
@@ -300,7 +300,7 @@ class Routy
    * Immediately stops execution and returns response.
    * 
    * @param string $data
-   * @param ?string $contentType
+   * @param string $contentType
    * @return void
    */
   public function sendData(string $data, ?string $contentType = null): void {

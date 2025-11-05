@@ -45,9 +45,9 @@ class Routy
 
   /**
    * Takes an optional argument array for configurations.
-   * - root = set the root app directory when running from a sub-directory
-   * - layout = set a default layout template to use in render() method
-   * - base = set a global base URI when running from a sub-directory
+   * - root = set the root app directory when running from a sub-directory; defaults to current directory
+   * - render = set a render strategy callback; defaults to none
+   * - base = set a global base URI when running from a sub-directory; defaults to empty string
    * 
    * @param array $config
    */
@@ -57,9 +57,9 @@ class Routy
     $this->path = isset($config['base']) ? [$config['base']] : [];
     $this->params = [];
     $this->config = [
-      'root' => $config['root'] ?? '',
-      'layout' => $config['layout'] ?? false,
-      'base' => $config['base'] ?? ''
+      'root' => $config['root'] ?? __DIR__ . '/',
+      'base' => $config['base'] ?? '',
+      'render' => $config['render'] ?? false
     ];
   }
 
@@ -323,32 +323,22 @@ class Routy
   }
 
   /**
-   * Renders a view file from the views directory utilizing standard PHP templating includes/requires.
+   * Renders a view file utilizing the configured render strategy callback.
+   * Throws an exception if no render strategy is configured.
    * Immediately stops execution and returns response.
    * 
    * Options:
-   * - layout = Overrides default layout. If set to false, will render without layout
-   * - title  = Page title to use in layout via `$title`
-   * - model  = Array of variables to expose to the template context
+   * - context  = Optional; Array of variables to expose to the template context
    * 
    * @param string $view
-   * @param array $options
+   * @param array $context
    * @return void
    */
-  public function render(string $view, ?array $options = []): void {
-    $view = $this->config['root'] . "views/$view.php";
-    $layout = $options['layout'] ?? $this->config['layout'] ?? false;
-    $options['app'] = $this;
-    ob_start();
-    if ($layout) {
-      $options['view'] = $view;
-      extract($options, EXTR_OVERWRITE);
-      include $this->config['root'] . "layouts/$layout.php";
-    } else {
-      extract($options, EXTR_OVERWRITE);
-      include $view;
-    }
-    exit(ob_get_clean() ?? '');
+  public function render(string $view, ?array $context = []): void {
+    if (!$this->config['render'] || !is_callable($this->config['render']))
+      throw new \Exception('No render strategy configured');
+    $context['app'] = $this;
+    $this->sendData($this->config['render']($view, $context, $this) ?? '');
   }
 
   /**

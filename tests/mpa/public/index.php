@@ -6,7 +6,13 @@ use GingerTek\Routy;
 
 $app = new Routy([
   'root' => '../',
-  'layout' => 'default'
+  'render' => function (string $view, array $context, Routy $app): string {
+    ob_start();
+    $context['view'] = $app->getConfig('root') . "views/$view.php";
+    extract($context, EXTR_OVERWRITE);
+    include $app->getConfig('root') . 'views/_layout.php';
+    return ob_get_clean();
+  }
 ]);
 
 $app->setCtx('db', new PDO('sqlite:' . $app->getConfig('root') . '/test.db', null, null, [
@@ -14,7 +20,7 @@ $app->setCtx('db', new PDO('sqlite:' . $app->getConfig('root') . '/test.db', nul
   PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
 ]));
 
-$app->get('/', fn() => $app->render('home'));
+$app->get('/', fn() => $app->render('home', ['title' => 'Home']));
 
 $app->get('/ajax', fn() => $app->render('ajax'));
 

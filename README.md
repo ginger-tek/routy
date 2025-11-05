@@ -51,15 +51,15 @@ $app->get('/products', \ProductsController::list(...));
 You can pass an associative array of optional configurations to the constructor.
 
 - `root` to set the root app directory when running from a sub-directory, i.e. public/. Defaults to current directory.
-- `layout` to set a default layout template file to use in the [`render()`](#render) reponse method. Defaults to no layout.
 - `base` to set a global base URI when running from a sub-directory
+- `render` to set a default template rendering strategy to use in the [`render()`](#render) response method. Defaults to false.
 ```php
 $app = new Routy([
   'root' => '../',
-  // i.e. app istance is in public/index.php and your app root is one directory above
+  // i.e. app instance is created in public/index.php and your app root is one directory above
 
-  'layout' => 'default',
-  // this will use the layout file at "layouts/default.php", respective of app root if set
+  'render' => function () {},
+  // this will be called by the render method and the returned string value will be sent as the response
 
   'base' => '/api',
   // i.e. your app files are in /wwwroot/my-api-app and is accessed via https://domain.com/api
@@ -220,12 +220,12 @@ echo $name; // John Doe
 ### `getParam()`
 Use to retrieve an incoming URI request parameter. Key lookup is case-sensitive. Returns false if not found.
 ```php
-$param = $app->getParam('param'); // <= /some/route/:param
-echo $param; // 
+$param = $app->getParam('param'); // <= /some/route/:param (i.e., bob)
+echo $param; // bob
 ```
 
 ### `getBody()`
-Use to retrieve the incoming payload data. JSON data will automatically be decoded and form data will be accessible as a standard object.
+Use to retrieve the incoming payload data. JSON data will automatically be decoded and form data will be cast to a standard object for cleaner syntax. For all other data types, body data will be left as is.
 ```php
 $app->get('/products', function (Routy $app) {
   $body = $app->getBody();
@@ -285,50 +285,44 @@ $app->sendJson([1, 2, ['three' => 4], 5]); // [1, 2, { "three: 4 }, 5]
 ```
 
 ### `render()`
-Use to render a PHP view file, using standard PHP includes and variable scope extraction for MVC modeling.
+Use to render a view file, calling the configured render strategy callback.
+Template rendering strategy is left up to the developer, allowing for the use any kind of templating engine.
 
-You can set a default layout to use via the constructor config. Layout and view files are expected to be `.php` files and be stored in a `layouts/` and `views/` directory, respectively, at the app root (See [Configurations](#configurations)).
+To configure a template rendering strategy, set the `render` option on your Routy instance to a callback. This callback must follow this argument signature:
 ```php
-$app = new Routy(['layout' => 'default']); // layouts/default.php
+function myRenderCallback(string $view, array $context, Routy $app): string
+```
+The callback must return a string value of your rendered content, which will be returned as the response. The app instance can be useful for acceessing the root path when dealing with nested directory structures.
+
+Below is an example using [Twig](https://twig.symfony.com/):
+```php
+$app = new Routy([
+  'render' => function (string $view, array $context, Routy $app): string {
+    $loader = new \Twig\Loader\FilesystemLoader($app->getConfig('root') . 'views/');
+    $twig = new \Twig\Environment($loader);
+    $model['app'] = $app;
+    return $twig->render("$view.html.twig", $model);
+  }
+]);
+...
+$app->render('home'); // views/home.html.twig
+$app->render('about'); // views/about.html.twig
+```
+
+Another example using plain PHP templating:
+```php
+$app = new Routy([
+  'render' => function (string $view, array $context, Routy $app): string {
+    ob_start();
+    $context['view'] = $app->getConfig('root') . "views/$view.php";
+    extract($context, EXTR_OVERWRITE);
+    include $app->getConfig('root') . 'views/_layout.php';
+    return ob_get_clean();
+  }
+]);
 ...
 $app->render('home'); // views/home.php
 $app->render('about'); // views/about.php
-```
-
-You can also override the default by settings the `layout` option to another path per call.
-```php
-$app = new Routy(['layout' => 'default']);
-...
-$app->render('view', ['layout' => 'alt-layout']);
-```
-
-Or you can render with no layout by setting the `layout` option to `false`, which will render just the view by itself.
-```php
-$app = new Routy(['layout' => 'default']);
-...
-$app->render('view', ['layout' => false]);
-```
-
-You may also not specify a layout at all, and just render view files.
-```php
-$app = new Routy;
-...
-$app->render('view');
-```
-
-To pass a model context into the view, set the `model` option to expose it to the layouyt and/or view template. The current app instance is also exposed to the template context automatically.
-```php
-$app->render('some-view', [
-  'model' => [
-    'someProperty' => 'some data'
-  ]
-]);
-
-// view.php
-<div><?= $model['someProperty'] ?></div>
-<?php if ($app->getCtx('isAdmin')): ?>
-  ...
-<?php endif ?>
 ```
 
 ### `status()`

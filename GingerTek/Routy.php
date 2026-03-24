@@ -106,7 +106,7 @@ class Routy
     if (!str_contains($method, $this->method))
       return;
     $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
-    if ($path === $this->uri || $path === '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\-\+\%\;\&]+)', $path) . '$#', $this->uri, $params)) {
+    if ($path === $this->uri || $path === '*' || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\+\.%;&_-]+)', $path) . '$#', $this->uri, $params)) {
       if (isset($params))
         $this->params = array_map(fn($v) => urldecode($v), $params);
       foreach ($handlers as $handler)

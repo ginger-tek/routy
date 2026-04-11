@@ -315,7 +315,7 @@ class Routy
    * Sends any data as a JSON string as the response.
    * Immediately stops execution and returns response.
    * 
-   * @param int $code
+   * @param mixed $data
    * @return void
    */
   public function sendJson(mixed $data): void {

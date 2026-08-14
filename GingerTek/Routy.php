@@ -209,14 +209,14 @@ class Routy
   }
 
   /**
-   * Returns the value of a specific HTTP header on the incoming request.
-   * Key lookup is case insensitive.
+   * Returns the value of a specific HTTP header on the incoming request. Returns false if not found.
+   * Key lookup is case-insensitive.
    * 
-   * @return string|null
+   * @return string|bool
    */
-  public function getHeader(string $key): string|null {
+  public function getHeader(string $key): string|bool {
     $key = strtoupper(str_replace('-', '_', $key));
-    return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? null;
+    return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? false;
   }
 
   /**
@@ -235,7 +235,7 @@ class Routy
    * 
    * @return string|bool
    */
-  public function getParam(string $key): ?string {
+  public function getParam(string $key): string|bool {
     return $this->params[$key] ?? false;
   }
 

@@ -65,7 +65,7 @@ class Routy
       'base' => $config['base'] ?? '',
       'render' => $config['render'] ?? null
     ];
-    $this->res['headers'] = [];
+    $this->res = ['headers' => [], 'cookies' => []];
   }
 
   /**
@@ -76,6 +76,9 @@ class Routy
     foreach ($this->res['headers'] as $name => $value)
       if ($value !== null)
         header("$name: $value");
+    foreach ($this->res['cookies'] ?? [] as $key => $cookie)
+      if (isset($cookie['value']))
+        setcookie($key, $cookie['value'], $cookie['options'] ?? []);
   }
 
   /**
@@ -277,7 +280,42 @@ class Routy
   }
 
   /**
-   * Returns the value of a specific query parameter on the incoming request. Returns false if not found.
+   * Returns the value of a request cookie or the value set for the outgoing response. Returns null if not found.
+   * @param string $key
+   * @return string|null
+   */
+  public function getCookie(string $key): ?string
+  {
+    return $_COOKIE[$key] ?? $this->res['cookies'][$key]['value'] ?? null;
+  }
+
+  /**
+   * Sets a cookie for the outgoing response.
+   * 
+   * @param string $key
+   * @param string $value
+   * @param array|null $options
+   * @return void
+   */
+  public function setCookie(string $key, string $value, ?array $options = []): void
+  {
+    $this->res['cookies'][$key] = ['value' => $value, 'options' => $options];
+  }
+
+  /**
+   * Removes a cookie from the outgoing response.
+   * 
+   * @param string $key
+   * @return void
+   */
+  public function removeCookie(string $key): void
+  {
+    unset($this->res['cookies'][$key]);
+    setcookie($key, '', time() - 3600);
+  }
+
+  /**
+   * Returns the value of a specific query parameter on the incoming request. Returns null if not found.
    * Key lookup is case-sensitive.
    * 
    * @return string|array|null

@@ -417,10 +417,13 @@ class Routy
    * Returns the current instance of Routy for method chaining
    * 
    * @param int $code
+   * @throws \InvalidArgumentException
    * @return Routy;
    */
   public function status(int $code): Routy
   {
+    if ($code < 100 || $code > 599)
+      throw new \InvalidArgumentException('Invalid HTTP status code');
     http_response_code($code);
     return $this;
   }

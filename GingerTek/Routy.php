@@ -327,7 +327,7 @@ class Routy
     if (!$arr || !$arr['name'] || !$arr['name'][0])
       return null;
     $keys = array_keys($arr);
-    $count = count($arr['name']);
+    $count = \count($arr['name']);
     $this->config['fileErrMap'] ??= array_flip(array_filter(
       get_defined_constants(),
       fn($k, $v) => str_contains($v, 'UPLOAD_ERR_'),

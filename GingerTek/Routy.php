@@ -63,7 +63,7 @@ class Routy
     $this->params = [];
     $this->config = [
       'base' => $config['base'] ?? '',
-      'render' => $config['render'] ?? false
+      'render' => $config['render'] ?? null
     ];
   }
 

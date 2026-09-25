@@ -19,7 +19,7 @@ Vue.createApp({
         setup() {
           const data = Vue.ref({})
           Vue.onMounted(() => {
-            fetch('/api')
+            fetch('/api/users')
               .then(r => r.json())
               .then(d => data.value = d)
           })

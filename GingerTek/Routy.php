@@ -44,6 +44,11 @@ class Routy
   private array $config;
 
   /**
+   * @internal Internal array of response context.
+   */
+  private array $res;
+
+  /**
    * Takes an optional argument array for configurations.
    * - root = set the root app directory when running from a sub-directory; defaults to current directory
    * - render = set a render strategy callback; defaults to none

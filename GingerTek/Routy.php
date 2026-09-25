@@ -239,37 +239,37 @@ class Routy
   }
 
   /**
-   * Returns the value of a specific HTTP header on the incoming request. Returns false if not found.
+   * Returns the value of a specific HTTP header on the incoming request. Returns null if not found.
    * Key lookup is case-insensitive.
    * 
-   * @return string|bool
+   * @return string|null
    */
-  public function getHeader(string $key): string|bool
+  public function getHeader(string $key): ?string
   {
     $key = strtoupper(str_replace('-', '_', $key));
-    return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? false;
+    return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? null;
   }
 
   /**
    * Returns the value of a specific query parameter on the incoming request. Returns false if not found.
    * Key lookup is case-sensitive.
    * 
-   * @return string|array|bool
+   * @return string|array|null
    */
-  public function getQuery(string $key): string|array|bool
+  public function getQuery(string $key): string|array|null
   {
-    return $_GET[$key] ?? false;
+    return $_GET[$key] ?? null;
   }
 
   /**
    * Returns the value of a specific request parameter on the incoming request. Returns false if not found.
    * Key lookup is case-sensitive.
    * 
-   * @return string|bool
+   * @return string|null
    */
-  public function getParam(string $key): string|bool
+  public function getParam(string $key): ?string
   {
-    return $this->params[$key] ?? false;
+    return $this->params[$key] ?? null;
   }
 
   /**

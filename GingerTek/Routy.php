@@ -160,10 +160,9 @@ class Routy
   {
     if ($base != '/')
       $this->path[] = '/' . trim($base, '/');
-    if (preg_match('#^' . join($this->path) . '(?:\/|$)#', $this->uri)) {
+    if (preg_match('#^' . join($this->path) . '(?:\/|$)#', $this->uri))
       foreach ($handlers as $handler)
         $handler($this);
-    }
     array_pop($this->path);
   }
 

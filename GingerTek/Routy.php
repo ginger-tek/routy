@@ -326,7 +326,7 @@ class Routy
   }
 
   /**
-   * Returns the value of a specific request parameter on the incoming request. Returns false if not found.
+   * Returns the value of a specific request parameter on the incoming request. Returns null if not found.
    * Key lookup is case-sensitive.
    * 
    * @return string|null

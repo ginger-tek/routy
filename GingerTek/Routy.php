@@ -388,21 +388,26 @@ class Routy
   }
 
   /**
-   * Renders a view file utilizing the configured render strategy callback.
-   * Throws an exception if no render strategy is configured.
+   * Renders a view file utilizing the user-configured render strategy callback.
    * Immediately stops execution and returns response.
    * 
    * Options:
    * - context  = Optional; Array of variables to expose to the template context
    * 
+   * The render strategy callback must adhere to the following function signature:
+   * ```php
+   * function (string $view, array $context, Routy $app): string
+   * ```
+   * 
    * @param string $view
    * @param array $context
+   * @throws \BadFunctionCallException
    * @return void
    */
   public function render(string $view, ?array $context = []): void
   {
     if (!$this->config['render'] || !is_callable($this->config['render']))
-      throw new \Exception('No render strategy configured');
+      throw new \BadFunctionCallException('No render strategy configured or not callable');
     $context['app'] = $this;
     $this->sendData($this->config['render']($view, $context, $this) ?? '');
   }

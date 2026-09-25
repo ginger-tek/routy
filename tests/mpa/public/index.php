@@ -2,23 +2,42 @@
 
 require '../../../GingerTek/Routy.php';
 
+const ROOT = __DIR__ . '/..';
+
+class DB
+{
+  public static ?PDO $pdo = null;
+  public static function connect(): PDO
+  {
+    if (!self::$pdo)
+      self::$pdo = new PDO('sqlite:' . ROOT . '/test.db', null, null, [
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+      ]);
+    return self::$pdo;
+  }
+
+  public static function run(string $sql, ?array $params = []): \PDOStatement
+  {
+    $stmt = self::connect()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt;
+  }
+}
+
 use GingerTek\Routy;
 
 $app = new Routy([
-  'root' => '../',
   'render' => function (string $view, array $context, Routy $app): string {
     ob_start();
-    $context['view'] = $app->getConfig('root') . "views/$view.php";
+    $context['view'] = ROOT . "/views/$view.php";
     extract($context, EXTR_OVERWRITE);
-    include $app->getConfig('root') . 'views/_layout.php';
+    include ROOT . '/views/_layout.php';
     return ob_get_clean();
   }
 ]);
 
-$app->setCtx('db', new PDO('sqlite:' . $app->getConfig('root') . '/test.db', null, null, [
-  PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
-  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-]));
+$app->use(fn() => $app->removeHeader('x-powered-by'));
 
 $app->get('/', fn() => $app->render('home', ['title' => 'Home']));
 
@@ -26,10 +45,8 @@ $app->get('/ajax', fn() => $app->render('ajax'));
 
 $app->group('/api', function (Routy $app) {
   $app->get('/ajax', function (Routy $app) {
-    $db = $app->getCtx('db');
-    $stmt = $db->prepare("select 'Hello from SQLite!' as text");
-    $stmt->execute();
-    $app->sendJson(['msg' => $stmt->fetch()->text]);
+    $res = DB::run("select 'Hello from SQLite!' as text")->fetch();
+    $app->sendJson(['msg' => $res->text]);
   });
 
   $app->fallback(fn() => $app->sendJson(['error' => 'API not found']));

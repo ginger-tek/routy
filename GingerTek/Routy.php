@@ -131,7 +131,7 @@ class Routy
       || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\+\.%;&_-]+)', $path) . '$#', $this->uri, $params)
     ) {
       if (isset($params))
-        $this->params = array_map(fn($v) => urldecode($v), $params);
+        $this->params = array_map(urldecode(...), $params);
       foreach ($handlers as $handler)
         $handler($this);
       exit();

@@ -242,15 +242,15 @@ class Routy
   }
 
   /**
-   * Returns the value of a specific HTTP header on the incoming request. Returns null if not found.
+   * Returns the value of a specific HTTP header on the incoming request or the value set for the outgoing response. Returns null if not found.
    * Key lookup is case-insensitive.
    * 
    * @return string|null
    */
   public function getHeader(string $key): ?string
   {
-    $key = strtoupper(str_replace('-', '_', $key));
-    return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? null;
+    $ukey = strtoupper(str_replace('-', '_', $key));
+    return $_SERVER["HTTP_$ukey"] ?? $_SERVER[$ukey] ?? $this->req['headers'][$key] ?? null;
   }
 
   /**

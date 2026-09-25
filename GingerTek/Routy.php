@@ -254,10 +254,10 @@ class Routy
    * Sets the value of a specific HTTP header for the outgoing response.
    * 
    * @param string $key
-   * @param string|null $value
+   * @param string $value
    * @return void
    */
-  public function setHeader(string $key, ?string $value = null): void
+  public function setHeader(string $key, string $value): void
   {
     if (str_contains($key, ' '))
       throw new \InvalidArgumentException('Header keys cannot contain spaces');

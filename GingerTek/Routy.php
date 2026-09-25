@@ -50,9 +50,8 @@ class Routy
 
   /**
    * Takes an optional argument array for configurations.
-   * - root = set the root app directory when running from a sub-directory; defaults to current directory
-   * - render = set a render strategy callback; defaults to none
    * - base = set a global base URI when running from a sub-directory; defaults to empty string
+   * - render = set a render strategy callback; defaults to none
    * 
    * @param array $config
    */
@@ -63,7 +62,6 @@ class Routy
     $this->path = isset($config['base']) ? [$config['base']] : [];
     $this->params = [];
     $this->config = [
-      'root' => $config['root'] ?? __DIR__ . '/',
       'base' => $config['base'] ?? '',
       'render' => $config['render'] ?? false
     ];

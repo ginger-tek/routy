@@ -102,14 +102,14 @@ class Routy
   }
 
   /**
-   * Retrieve a context value by key from the current Routy instance.
+   * Retrieve a context value by key from the current Routy instance. Returns null if not found.
    * 
    * @param string $key
    * @return mixed
    */
   public function getCtx(string $key): mixed
   {
-    return $this->ctx[$key] ?? false;
+    return $this->ctx[$key] ?? null;
   }
 
   /**

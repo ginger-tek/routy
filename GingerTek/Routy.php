@@ -379,11 +379,12 @@ class Routy
    * Immediately stops execution and returns response.
    * 
    * @param mixed $data
+   * @throws \JsonException
    * @return void
    */
   public function sendJson(mixed $data): void
   {
-    $this->sendData(json_encode($data), 'application/json');
+    $this->sendData(json_encode($data, 512, JSON_THROW_ON_ERROR), 'application/json');
   }
 
   /**

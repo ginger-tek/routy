@@ -227,7 +227,7 @@ class Routy
   }
 
   /**
-   * Defines a route for any standard HTTP method on which to match the incoming URI against.
+   * Defines a route for any HTTP method on which to match the incoming URI against.
    *
    * @param string $route
    * @param callable $handlers
@@ -235,7 +235,7 @@ class Routy
    */
   public function any(string $route, callable ...$handlers): void
   {
-    $this->route('GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS', $route, ...$handlers);
+    $this->route('*', $route, ...$handlers);
   }
 
   /**

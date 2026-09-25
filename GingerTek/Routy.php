@@ -24,22 +24,22 @@ class Routy
   public readonly string $method;
 
   /**
-   * @var object Internal route parameters parsed from the URI.
+   * @internal Internal route parameters parsed from the URI.
    */
   private array $params;
 
   /**
-   * @var array General purpose array to use for passing around resources and references.
+   * @internal General purpose array to use for passing around resources and references.
    */
   private array $ctx;
 
   /**
-   * @var array Internal array of URI parts for handling grouped/nested matching.
+   * @internal Internal array of URI parts for handling grouped/nested matching.
    */
   private array $path;
 
   /**
-   * @var string Internal string path for default layout template file to use in render() method.
+   * @internal Internal string path for default layout template file to use in render() method.
    */
   private array $config;
 

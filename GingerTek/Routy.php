@@ -51,7 +51,8 @@ class Routy
    * 
    * @param array $config
    */
-  public function __construct(?array $config = []) {
+  public function __construct(?array $config = [])
+  {
     $this->uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
     $this->method = $_SERVER['REQUEST_METHOD'];
     $this->path = isset($config['base']) ? [$config['base']] : [];
@@ -69,7 +70,8 @@ class Routy
    * @param string $key
    * @return string|null
    */
-  public function getConfig(string $key): ?string {
+  public function getConfig(string $key): ?string
+  {
     return $this->config[$key] ?? null;
   }
 
@@ -80,7 +82,8 @@ class Routy
    * @param mixed $value
    * @return void
    */
-  public function setCtx(string $key, mixed $value): void {
+  public function setCtx(string $key, mixed $value): void
+  {
     $this->ctx[$key] = $value;
   }
 
@@ -90,7 +93,8 @@ class Routy
    * @param string $key
    * @return mixed
    */
-  public function getCtx(string $key): mixed {
+  public function getCtx(string $key): mixed
+  {
     return $this->ctx[$key] ?? false;
   }
 
@@ -102,7 +106,8 @@ class Routy
    * @param string $route
    * @param callable $handlers
    */
-  public function route(string $method, string $route, callable ...$handlers): void {
+  public function route(string $method, string $route, callable ...$handlers): void
+  {
     if (!str_contains($method, $this->method))
       return;
     $path = rtrim(join('', $this->path) . $route, '/') ?: '/';
@@ -113,7 +118,7 @@ class Routy
         $handler($this);
       exit();
     }
-  }  
+  }
 
   /**
    * Defines a middleware, which must be a function that accepts the current Routy class instance as its sole argument.
@@ -121,7 +126,8 @@ class Routy
    * @param callable $middleware
    * @return void
    */
-  public function use(callable $middleware): void {
+  public function use(callable $middleware): void
+  {
     $middleware($this);
   }
 
@@ -132,7 +138,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function group(string $base, callable ...$handlers): void {
+  public function group(string $base, callable ...$handlers): void
+  {
     if ($base != '/')
       $this->path[] = '/' . trim($base, '/');
     if (preg_match('#^' . join($this->path) . '(?:\/|$)#', $this->uri)) {
@@ -149,7 +156,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function get(string $route, callable ...$handlers): void {
+  public function get(string $route, callable ...$handlers): void
+  {
     $this->route('GET', $route, ...$handlers);
   }
 
@@ -160,7 +168,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function post(string $route, callable ...$handlers): void {
+  public function post(string $route, callable ...$handlers): void
+  {
     $this->route('POST', $route, ...$handlers);
   }
 
@@ -171,7 +180,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function put(string $route, callable ...$handlers): void {
+  public function put(string $route, callable ...$handlers): void
+  {
     $this->route('PUT', $route, ...$handlers);
   }
 
@@ -182,7 +192,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function patch(string $route, callable ...$handlers): void {
+  public function patch(string $route, callable ...$handlers): void
+  {
     $this->route('PATCH', $route, ...$handlers);
   }
 
@@ -193,7 +204,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function delete(string $route, callable ...$handlers): void {
+  public function delete(string $route, callable ...$handlers): void
+  {
     $this->route('DELETE', $route, ...$handlers);
   }
 
@@ -204,7 +216,8 @@ class Routy
    * @param callable $handlers
    * @return void
    */
-  public function any(string $route, callable ...$handlers): void {
+  public function any(string $route, callable ...$handlers): void
+  {
     $this->route('GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS', $route, ...$handlers);
   }
 
@@ -214,7 +227,8 @@ class Routy
    * 
    * @return string|bool
    */
-  public function getHeader(string $key): string|bool {
+  public function getHeader(string $key): string|bool
+  {
     $key = strtoupper(str_replace('-', '_', $key));
     return $_SERVER["HTTP_$key"] ?? $_SERVER[$key] ?? false;
   }
@@ -225,7 +239,8 @@ class Routy
    * 
    * @return string|array|bool
    */
-  public function getQuery(string $key): string|array|bool {
+  public function getQuery(string $key): string|array|bool
+  {
     return $_GET[$key] ?? false;
   }
 
@@ -235,7 +250,8 @@ class Routy
    * 
    * @return string|bool
    */
-  public function getParam(string $key): string|bool {
+  public function getParam(string $key): string|bool
+  {
     return $this->params[$key] ?? false;
   }
 
@@ -245,7 +261,8 @@ class Routy
    * 
    * @return mixed
    */
-  public function getBody(): mixed {
+  public function getBody(): mixed
+  {
     $type = $this->getHeader('content-type');
     if (str_contains($type, 'multipart/form-data') || str_contains($type, 'application/x-www-form-urlencoded'))
       return (object) $_POST;
@@ -261,7 +278,8 @@ class Routy
    * 
    * @return array|null
    */
-  public function getFiles(string $name): array|null {
+  public function getFiles(string $name): array|null
+  {
     $arr = $_FILES[$name] ?? false;
     if (!$arr || !$arr['name'] || !$arr['name'][0])
       return null;
@@ -288,7 +306,8 @@ class Routy
    * @param bool   $isPermanent
    * @return void
    */
-  public function redirect(string $uri, ?bool $isPermanent = false): void {
+  public function redirect(string $uri, ?bool $isPermanent = false): void
+  {
     http_response_code($isPermanent ? 301 : 302);
     header("Location: $uri");
     exit();
@@ -303,10 +322,11 @@ class Routy
    * @param string $contentType
    * @return void
    */
-  public function sendData(string $data, ?string $contentType = null): void {
+  public function sendData(string $data, ?string $contentType = null): void
+  {
     if (is_file($data))
       header('content-type: ' . ($contentType ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $data)));
-    elseif($contentType)
+    elseif ($contentType)
       header("content-type: $contentType");
     exit(is_file($data) ? file_get_contents($data) : $data);
   }
@@ -318,7 +338,8 @@ class Routy
    * @param mixed $data
    * @return void
    */
-  public function sendJson(mixed $data): void {
+  public function sendJson(mixed $data): void
+  {
     $this->sendData(json_encode($data), 'application/json');
   }
 
@@ -334,7 +355,8 @@ class Routy
    * @param array $context
    * @return void
    */
-  public function render(string $view, ?array $context = []): void {
+  public function render(string $view, ?array $context = []): void
+  {
     if (!$this->config['render'] || !is_callable($this->config['render']))
       throw new \Exception('No render strategy configured');
     $context['app'] = $this;
@@ -348,7 +370,8 @@ class Routy
    * @param int $code
    * @return Routy;
    */
-  public function status(int $code): Routy {
+  public function status(int $code): Routy
+  {
     http_response_code($code);
     return $this;
   }
@@ -360,7 +383,8 @@ class Routy
    * @param int $code
    * @return void
    */
-  public function end(?int $code = 200): void {
+  public function end(?int $code = 200): void
+  {
     $this->status($code);
     exit();
   }
@@ -372,7 +396,8 @@ class Routy
    * @param callable $handler
    * @return void
    */
-  public function fallback(callable $handler): void {
+  public function fallback(callable $handler): void
+  {
     $this->status(404);
     $handler($this);
     exit();

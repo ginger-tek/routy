@@ -251,6 +251,32 @@ class Routy
   }
 
   /**
+   * Sets the value of a specific HTTP header for the outgoing response.
+   * 
+   * @param string $key
+   * @param string|null $value
+   * @return void
+   */
+  public function setHeader(string $key, ?string $value = null): void
+  {
+    if (str_contains($key, ' '))
+      throw new \InvalidArgumentException('Header keys cannot contain spaces');
+    $this->res['headers'][$key] = $value;
+  }
+
+  /**
+   * Removes a specific HTTP header from the outgoing response.
+   * 
+   * @param string $key
+   * @return void
+   */
+  public function removeHeader(string $key): void
+  {
+    unset($this->res['headers'][$key]);
+    header_remove($key);
+  }
+
+  /**
    * Returns the value of a specific query parameter on the incoming request. Returns false if not found.
    * Key lookup is case-sensitive.
    * 

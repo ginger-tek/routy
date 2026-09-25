@@ -65,6 +65,17 @@ class Routy
       'base' => $config['base'] ?? '',
       'render' => $config['render'] ?? null
     ];
+    $this->res['headers'] = [];
+  }
+
+  /**
+   * Set headers on final response
+   */
+  public function __destruct()
+  {
+    foreach ($this->res['headers'] as $name => $value)
+      if ($value !== null)
+        header("$name: $value");
   }
 
   /**

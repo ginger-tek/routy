@@ -65,7 +65,7 @@ class Routy
       'base' => $config['base'] ?? '',
       'render' => $config['render'] ?? null
     ];
-    $this->res = ['headers' => [], 'cookies' => []];
+    $this->res = ['headers' => [], 'cookies' => [], 'body' => ''];
   }
 
   /**
@@ -79,6 +79,8 @@ class Routy
     foreach ($this->res['cookies'] ?? [] as $key => $cookie)
       if (isset($cookie['value']))
         setcookie($key, $cookie['value'], $cookie['options'] ?? []);
+    if (isset($this->res['body']))
+      echo $this->res['body'];
   }
 
   /**
@@ -409,7 +411,8 @@ class Routy
       $this->setHeader('Content-Type', $contentType ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $data));
     elseif ($contentType)
       $this->setHeader('Content-Type', $contentType);
-    exit(is_file($data) ? file_get_contents($data) : $data);
+    $this->res['body'] = is_file($data) ? file_get_contents($data) : $data;
+    exit();
   }
 
   /**

@@ -391,8 +391,7 @@ class Routy
    */
   public function redirect(string $uri, ?bool $isPermanent = false): void
   {
-    http_response_code($isPermanent ? 301 : 302);
-    header("Location: $uri");
+    $this->status($isPermanent ? 301 : 302)->setHeader('Location', $uri);
     exit();
   }
 

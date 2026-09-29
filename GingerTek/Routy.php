@@ -297,6 +297,7 @@ class Routy
 
   /**
    * Sets the value of a specific HTTP header for the outgoing response.
+   * Returns the current instance of Routy for method chaining.
    * 
    * @param string $key
    * @param string $value

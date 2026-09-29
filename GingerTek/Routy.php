@@ -49,6 +49,11 @@ class Routy
   private array $res;
 
   /**
+   * @internal Indicates whether the headers have been sent.
+   */
+  private bool $metadata_sent = false;
+
+  /**
    * Takes an optional argument array for configurations.
    * - base = set a global base URI when running from a sub-directory; defaults to empty string
    * - render = set a render strategy callback; defaults to none

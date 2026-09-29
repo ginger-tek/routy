@@ -444,8 +444,7 @@ class Routy
   }
 
   /**
-   * Sends string data as the response. The content type on the response can be overridden via the optional second argument.
-   * If the string data is a path to a file, the contents of the file will be sent and the content type will be the file's detected MIME type, unless specified explicitly by the second argument.
+   * Sends string data as the response with an optional content type. If no content type is specified, it will be sent as is.
    * Immediately stops execution and returns response.
    * 
    * @param string $data
@@ -454,11 +453,9 @@ class Routy
    */
   public function sendData(string $data, ?string $contentType = null): void
   {
-    if (is_file($data))
-      $this->setHeader('Content-Type', $contentType ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $data));
-    elseif ($contentType)
+    if ($contentType)
       $this->setHeader('Content-Type', $contentType);
-    $this->res['body'] = is_file($data) ? file_get_contents($data) : $data;
+    $this->res['body'] = $data;
     exit();
   }
 
@@ -473,6 +470,59 @@ class Routy
   public function sendJson(mixed $data): void
   {
     $this->sendData(json_encode($data, 512, JSON_THROW_ON_ERROR), 'application/json');
+  }
+
+  /**
+   * Sends a file as the response either all at once or streamed in chunks, which can be toggled using the `$asStream` parameter.
+   * However, if the file is too large to fit into memory, it will be always be streamed by default.
+   * Immediately stops execution and returns response.
+   * 
+   * @param string $path
+   * @param mixed $contentType
+   * @param bool $asStream
+   * @return void
+   */
+  public function sendFile(string $path, ?string $contentType = null, bool $asStream = false): void
+  {
+    if (!is_file($path))
+      $this->end(404);
+    ob_get_status(true) && ob_clean();
+    $this->setHeader('Content-Type', $contentType ?? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $path))
+      ->setHeader('Content-Length', filesize($path));
+    $memLimit = (int) ini_get('memory_limit') * 1024 * 1024;
+    $realSize = (filesize($path) + memory_get_usage()) * 1.5;
+    if ($asStream || $realSize > $memLimit) {
+      $size = filesize($path);
+      $start = 0;
+      $end = $size - 1;
+      if ($range = $this->getHeader('Range')) {
+        [$start, $end] = explode('-', str_replace('bytes=', '', $range));
+        $start = (int) ($start ?: 0);
+        $end = (int) ($end ?: $size - 1);
+        $start = max(0, min($start, $size - 1));
+        $end = max($start, min($end, $size - 1));
+        $this->status(206);
+      }
+      $length = $end - $start + 1;
+      $this->setHeader('Accept-Ranges', 'bytes')
+        ->setHeader('Content-Length', $length)
+        ->setHeader('Content-Range', "bytes $start-$end/$size")
+        ->sendMetadata();
+      $fp = fopen($path, 'rb');
+      fseek($fp, $start);
+      $chunkSize = 8192;
+      while (!feof($fp) && ftell($fp) <= $end) {
+        $readSize = min($chunkSize, $length);
+        echo fread($fp, $readSize);
+        $length -= $readSize;
+        if (connection_status() !== CONNECTION_NORMAL)
+          break;
+        flush();
+      }
+      fclose($fp);
+    } else
+      $this->res['body'] = file_get_contents($path);
+    exit();
   }
 
   /**

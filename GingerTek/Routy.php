@@ -418,7 +418,7 @@ class Routy
     $count = \count($arr['name']);
     $this->config['fileErrMap'] ??= array_flip(array_filter(
       get_defined_constants(),
-      fn($k, $v) => str_contains($v, 'UPLOAD_ERR_'),
+      fn($_, $v) => str_contains($v, 'UPLOAD_ERR_'),
       ARRAY_FILTER_USE_BOTH
     ));
     for ($i = 0; $i < $count; $i++) {

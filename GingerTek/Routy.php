@@ -83,14 +83,30 @@ class Routy
    */
   public function __destruct()
   {
+    $this->sendMetadata();
+    if (!empty($this->res['body']))
+      echo $this->res['body'];
+  }
+
+  /**
+   * Sends HTTP status, headers and cookies for the response.
+   *
+   * @internal
+   */
+  private function sendMetadata(): void
+  {
+    if ($this->metadata_sent)
+      return;
+    http_response_code($this->res['status'] ?? 404);
     foreach ($this->res['headers'] as $name => $value)
       if ($value !== null)
         header("$name: $value");
+    $this->res['headers'] = [];
     foreach ($this->res['cookies'] ?? [] as $key => $cookie)
       if (isset($cookie['value']))
         setcookie($key, $cookie['value'], $cookie['options'] ?? []);
-    if (isset($this->res['body']))
-      echo $this->res['body'];
+    $this->res['cookies'] = [];
+    $this->metadata_sent = true;
   }
 
   /**

@@ -70,7 +70,12 @@ class Routy
       'base' => $config['base'] ?? '',
       'render' => $config['render'] ?? null
     ];
-    $this->res = ['headers' => [], 'cookies' => [], 'body' => ''];
+    $this->res = [
+      'status' => 200,
+      'headers' => [],
+      'cookies' => [],
+      'body' => ''
+    ];
   }
 
   /**
@@ -469,7 +474,7 @@ class Routy
   {
     if ($code < 100 || $code > 599)
       throw new \InvalidArgumentException('Invalid HTTP status code');
-    http_response_code($code);
+    $this->res['status'] = $code;
     return $this;
   }
 

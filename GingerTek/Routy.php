@@ -79,7 +79,9 @@ class Routy
   }
 
   /**
-   * Set headers on final response
+   * Sets headers, cookies and body content as final response.
+   * 
+   * @internal
    */
   public function __destruct()
   {

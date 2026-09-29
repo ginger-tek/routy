@@ -270,6 +270,20 @@ class Routy
   }
 
   /**
+   * Shorthand for sending a custom HTTP 404 response based on current route.
+   * Immediately stops execution and returns response.
+   * 
+   * @param callable $handler
+   * @return void
+   */
+  public function fallback(callable $handler): void
+  {
+    $this->status(404);
+    $handler($this);
+    exit();
+  }
+
+  /**
    * Returns the value of a specific HTTP header on the incoming request or the value set for the outgoing response. Returns null if not found.
    * Key lookup is case-insensitive.
    * 
@@ -504,20 +518,6 @@ class Routy
   public function end(?int $code = 200): void
   {
     $this->status($code);
-    exit();
-  }
-
-  /**
-   * Shorthand for sending a custom HTTP 404 response based on current route.
-   * Immediately stops execution and returns response.
-   * 
-   * @param callable $handler
-   * @return void
-   */
-  public function fallback(callable $handler): void
-  {
-    $this->status(404);
-    $handler($this);
     exit();
   }
 }

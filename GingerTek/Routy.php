@@ -161,7 +161,7 @@ class Routy
     if (
       $path === $this->uri
       || $path === '*'
-      || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\@\#\%\&\+\=\_\-]+)', $path) . '$#', $this->uri, $params)
+      || preg_match('#^' . preg_replace('#:(\w+)#', '(?<$1>[\w\@\#\%\&\+\=\_\-\.]+)', $path) . '$#', $this->uri, $params)
     ) {
       if (isset($params))
         $this->params = array_map(urldecode(...), $params);

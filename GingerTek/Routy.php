@@ -300,25 +300,28 @@ class Routy
    * 
    * @param string $key
    * @param string $value
-   * @return void
+   * @return Routy
    */
-  public function setHeader(string $key, string $value): void
+  public function setHeader(string $key, string $value): Routy
   {
     if (str_contains($key, ' '))
       throw new \InvalidArgumentException('Header keys cannot contain spaces');
     $this->res['headers'][$key] = $value;
+    return $this;
   }
 
   /**
    * Removes a specific HTTP header from the outgoing response.
+   * Returns the current instance of Routy for method chaining.
    * 
    * @param string $key
-   * @return void
+   * @return Routy
    */
-  public function removeHeader(string $key): void
+  public function removeHeader(string $key): Routy
   {
     unset($this->res['headers'][$key]);
     header_remove($key);
+    return $this;
   }
 
   /**
@@ -333,27 +336,31 @@ class Routy
 
   /**
    * Sets a cookie for the outgoing response.
+   * Returns the current instance of Routy for method chaining.
    * 
    * @param string $key
    * @param string $value
    * @param array|null $options
-   * @return void
+   * @return Routy
    */
-  public function setCookie(string $key, string $value, ?array $options = []): void
+  public function setCookie(string $key, string $value, ?array $options = []): Routy
   {
     $this->res['cookies'][$key] = ['value' => $value, 'options' => $options];
+    return $this;
   }
 
   /**
    * Removes a cookie from the outgoing response.
-   * 
+   * Returns the current instance of Routy for method chaining.
+   *
    * @param string $key
-   * @return void
+   * @return Routy
    */
-  public function removeCookie(string $key): void
+  public function removeCookie(string $key): Routy
   {
     unset($this->res['cookies'][$key]);
     setcookie($key, '', time() - 3600);
+    return $this;
   }
 
   /**
